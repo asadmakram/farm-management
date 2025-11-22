@@ -1,0 +1,27 @@
+services:
+  # Web Service
+  - type: web
+    name: dairy-farm-app
+    env: docker
+    region: oregon
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: dairy-farm-mongodb
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://dairy-farm-app.onrender.com
+
+databases:
+  - name: dairy-farm-mongodb
+    plan: free
+    databaseName: dairy-farm-db
+    user: dairy-farm-user

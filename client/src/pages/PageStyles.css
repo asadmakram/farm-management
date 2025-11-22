@@ -1,0 +1,296 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--surface);
+  border-radius: 0.5rem;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.modal-content form {
+  padding: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+.animal-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.animal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.animal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.dry {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.sold {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.deceased {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.animal-details {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.animal-details p {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Add consistent spacing around card control areas */
+.card-actions,
+.modal-actions,
+.card .card-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.card .card-actions .btn,
+.modal-actions .btn {
+  margin-right: 0.5rem;
+}
+
+.card .card-actions {
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Make action buttons slightly smaller inside cards to prevent overflow */
+.card-actions .btn-sm,
+.modal-actions .btn-sm {
+  padding: 0.375rem 0.75rem;
+}
+
+/* Ensure buttons inside cards have consistent spacing */
+.card .btn + .btn { margin-left: 0.5rem; }
+
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.empty-state svg {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+.empty-state p {
+  font-size: 1.125rem;
+  margin-bottom: 1.5rem;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: var(--background);
+  border-bottom: 2px solid var(--border-color);
+}
+
+th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+td { word-break: break-word; }
+
+tbody tr:hover {
+  background: var(--background);
+}
+
+.filter-section {
+  background: var(--surface);
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 100%;
+  }
+
+  .card-actions {
+    flex-direction: column;
+  }
+
+  .card-actions .btn {
+    width: 100%;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .container { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .card { padding: 1rem; }
+  .modal-header h2 { font-size: 1rem; }
+  .form-label { font-size: 0.8125rem; }
+  .form-input, .form-select, .form-textarea { padding: 0.5rem; }
+  .btn { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+  .animal-header h3 { font-size: 1rem; }
+  .animal-details p { font-size: 0.8rem; }
+}
+
+
+/* Mobile responsive table transforming rows into stacked cards */
+@media (max-width: 600px) {
+  .table-container table,
+  .table-container thead,
+  .table-container tbody,
+  .table-container th,
+  .table-container td,
+  .table-container tr {
+    display: block;
+  }
+
+  .table-container thead {
+    display: none;
+  }
+
+  .table-container tr {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--surface);
+    border-radius: 0.5rem;
+  }
+
+  .table-container td {
+    padding: 0.5rem 1rem 0.5rem 40%;
+    position: relative;
+    border: none;
+    text-align: left;
+  }
+
+  .table-container td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .table-container td:last-child {
+    padding-bottom: 0.5rem;
+  }
+}
+
