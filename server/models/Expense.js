@@ -13,8 +13,33 @@ const expenseSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['feed', 'labour', 'rental', 'veterinary', 'medicine', 'equipment', 'utilities', 'transportation', 'other'],
+    enum: [
+      // Asset Expenses (Capital)
+      'animal_purchase',
+      'equipment_purchase',
+      'land_improvement',
+      'building_construction',
+      
+      // Operating Expenses (Monthly/Recurring)
+      'feed',
+      'labour',
+      'rental',
+      'veterinary',
+      'medicine',
+      'utilities',
+      'transportation',
+      'utensils',
+      'maintenance',
+      'insurance',
+      'other'
+    ],
     required: true
+  },
+  expenseType: {
+    type: String,
+    enum: ['asset', 'operating'],
+    required: true,
+    default: 'operating'
   },
   amount: {
     type: Number,

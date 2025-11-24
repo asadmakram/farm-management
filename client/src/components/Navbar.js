@@ -3,7 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   FaHome, FaTint, FaMoneyBillWave, FaSyringe, 
-  FaBaby, FaChartBar, FaBars, FaTimes, FaSignOutAlt 
+  FaBaby, FaChartBar, FaBars, FaTimes, FaSignOutAlt,
+  FaFileContract, FaRedoAlt 
 } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import './Navbar.css';
@@ -24,7 +25,9 @@ const Navbar = () => {
     { path: '/animals', label: 'Animals', icon: <GiCow /> },
     { path: '/milk/production', label: 'Milk Production', icon: <FaTint /> },
     { path: '/milk/sales', label: 'Milk Sales', icon: <FaMoneyBillWave /> },
+    { path: '/contracts', label: 'Contracts', icon: <FaFileContract /> },
     { path: '/expenses', label: 'Expenses', icon: <FaMoneyBillWave /> },
+    { path: '/recurring-expenses', label: 'Recurring Expenses', icon: <FaRedoAlt /> },
     { path: '/vaccinations', label: 'Vaccinations', icon: <FaSyringe /> },
     { path: '/calves', label: 'Calves', icon: <FaBaby /> },
     { path: '/reports', label: 'Reports', icon: <FaChartBar /> }

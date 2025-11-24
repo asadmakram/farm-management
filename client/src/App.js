@@ -21,6 +21,8 @@ import Expenses from './pages/Expenses';
 import Vaccinations from './pages/Vaccinations';
 import Calves from './pages/Calves';
 import Reports from './pages/Reports';
+import Contracts from './pages/Contracts';
+import RecurringExpenses from './pages/RecurringExpenses';
 
 function App() {
   return (
@@ -37,7 +39,9 @@ function App() {
               <Route path="/animals" element={<PrivateRoute><Animals /></PrivateRoute>} />
               <Route path="/milk/production" element={<PrivateRoute><MilkProduction /></PrivateRoute>} />
               <Route path="/milk/sales" element={<PrivateRoute><MilkSales /></PrivateRoute>} />
+              <Route path="/contracts" element={<PrivateRoute><Contracts /></PrivateRoute>} />
               <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
+              <Route path="/recurring-expenses" element={<PrivateRoute><RecurringExpenses /></PrivateRoute>} />
               <Route path="/vaccinations" element={<PrivateRoute><Vaccinations /></PrivateRoute>} />
               <Route path="/calves" element={<PrivateRoute><Calves /></PrivateRoute>} />
               <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />

@@ -147,7 +147,7 @@ router.delete('/production/:id', auth, async (req, res) => {
 // @access  Private
 router.get('/sales', auth, async (req, res) => {
   try {
-    const { startDate, endDate, customerType } = req.query;
+    const { startDate, endDate, saleType, paymentStatus } = req.query;
     
     let query = { userId: req.user._id };
     
@@ -158,20 +158,58 @@ router.get('/sales', auth, async (req, res) => {
       };
     }
     
-    if (customerType) {
-      query.customerType = customerType;
+    if (saleType) {
+      query.saleType = saleType;
+    }
+    
+    if (paymentStatus) {
+      query.paymentStatus = paymentStatus;
     }
 
-    const sales = await MilkSale.find(query).sort({ date: -1 });
+    const sales = await MilkSale.find(query)
+      .populate('contractId', 'vendorName ratePerLiter')
+      .sort({ date: -1 });
 
-    const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0);
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+    // Calculate summary by sale type
+    const summary = {
+      totalQuantity: 0,
+      totalRevenue: 0,
+      bandhi: { quantity: 0, revenue: 0, count: 0 },
+      mandi: { quantity: 0, revenue: 0, count: 0 },
+      door_to_door: { quantity: 0, revenue: 0, count: 0 },
+      pending: 0,
+      received: 0
+    };
+
+    sales.forEach(sale => {
+      summary.totalQuantity += sale.quantity;
+      summary.totalRevenue += sale.totalAmount;
+      
+      if (sale.saleType === 'bandhi') {
+        summary.bandhi.quantity += sale.quantity;
+        summary.bandhi.revenue += sale.totalAmount;
+        summary.bandhi.count++;
+      } else if (sale.saleType === 'mandi') {
+        summary.mandi.quantity += sale.quantity;
+        summary.mandi.revenue += sale.totalAmount;
+        summary.mandi.count++;
+      } else if (sale.saleType === 'door_to_door') {
+        summary.door_to_door.quantity += sale.quantity;
+        summary.door_to_door.revenue += sale.totalAmount;
+        summary.door_to_door.count++;
+      }
+      
+      if (sale.paymentStatus === 'pending') {
+        summary.pending += sale.totalAmount;
+      } else if (sale.paymentStatus === 'received') {
+        summary.received += sale.totalAmount;
+      }
+    });
 
     res.json({ 
       success: true, 
       count: sales.length,
-      totalQuantity,
-      totalRevenue,
+      summary,
       data: sales 
     });
   } catch (error) {
@@ -189,7 +227,7 @@ router.post(
     auth,
     body('date').notEmpty().withMessage('Date is required'),
     body('quantity').isFloat({ min: 0 }).withMessage('Quantity must be positive'),
-    body('customerType').notEmpty().withMessage('Customer type is required'),
+    body('saleType').isIn(['bandhi', 'mandi', 'door_to_door']).withMessage('Invalid sale type'),
     body('ratePerLiter').isFloat({ min: 0 }).withMessage('Rate must be positive')
   ],
   async (req, res) => {
@@ -206,6 +244,10 @@ router.post(
 
       const sale = new MilkSale(saleData);
       await sale.save();
+      
+      if (sale.contractId) {
+        await sale.populate('contractId', 'vendorName ratePerLiter');
+      }
 
       res.status(201).json({ 
         success: true, 

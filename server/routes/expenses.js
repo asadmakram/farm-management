@@ -9,7 +9,7 @@ const auth = require('../middleware/auth');
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { startDate, endDate, category } = req.query;
+    const { startDate, endDate, category, expenseType } = req.query;
     
     let query = { userId: req.user._id };
     
@@ -26,16 +26,34 @@ router.get('/', auth, async (req, res) => {
       query.category = category;
     }
 
+    // Add expense type filter
+    if (expenseType) {
+      query.expenseType = expenseType;
+    }
+
     const expenses = await Expense.find(query)
       .populate('animalId', 'tagNumber name')
       .sort({ date: -1 });
 
     const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Segregate by expense type
+    const assetExpenses = expenses.filter(e => e.expenseType === 'asset');
+    const operatingExpenses = expenses.filter(e => e.expenseType === 'operating');
+    
+    const totalAssets = assetExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalOperating = operatingExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     res.json({ 
       success: true, 
       count: expenses.length,
       totalAmount,
+      summary: {
+        totalAssets,
+        totalOperating,
+        assetCount: assetExpenses.length,
+        operatingCount: operatingExpenses.length
+      },
       data: expenses 
     });
   } catch (error) {
