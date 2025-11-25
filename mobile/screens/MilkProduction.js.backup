@@ -1,0 +1,218 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import api from '../utils/api';
+import FormInput from '../components/FormInput';
+import FormSelect from '../components/FormSelect';
+import FormDatePicker from '../components/FormDatePicker';
+import FormButton from '../components/FormButton';
+
+const MilkProduction = () => {
+  const [records, setRecords] = useState([]);
+  const [animals, setAnimals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    animalId: '',
+    date: new Date().toISOString().split('T')[0],
+    morningYield: '',
+    eveningYield: '',
+    quality: 'good',
+    notes: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [recordsRes, animalsRes] = await Promise.all([
+        api.get('/milk/production'),
+        api.get('/animals')
+      ]);
+      setRecords(recordsRes.data.data || []);
+      setAnimals(animalsRes.data.data ? animalsRes.data.data.filter(a => a.status === 'active' && a.gender === 'female') : []);
+      setLoading(false);
+    } catch (error) {
+      Alert.alert('Error', 'Error fetching data');
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.animalId || (!formData.morningYield && !formData.eveningYield)) {
+      Alert.alert('Error', 'Please fill required fields');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await api.post('/milk/production', formData);
+      Alert.alert('Success', 'Milk production record added successfully');
+      setFormData({
+        animalId: '',
+        date: new Date().toISOString().split('T')[0],
+        morningYield: '',
+        eveningYield: '',
+        quality: 'good',
+        notes: ''
+      });
+      fetchData();
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Error adding record');
+    }
+    setIsSubmitting(false);
+  };
+
+  const renderRecord = ({ item }) => (
+    <View style={styles.recordItem}>
+      <Text>Animal: {item.animalId?.name || 'Unknown'}</Text>
+      <Text>Date: {item.date}</Text>
+      <Text>Morning: {item.morningYield} L</Text>
+      <Text>Evening: {item.eveningYield} L</Text>
+      <Text>Total: {item.totalYield} L</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Milk Production</Text>
+
+      <View style={styles.form}>
+        <Text style={styles.label}>Animal</Text>
+        {/* For simplicity, use TextInput for animalId, but ideally picker */}
+        <TextInput
+          style={styles.input}
+          placeholder="Animal ID"
+          value={formData.animalId}
+          onChangeText={(value) => setFormData({ ...formData, animalId: value })}
+        />
+
+        <Text style={styles.label}>Date</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.date}
+          onChangeText={(value) => setFormData({ ...formData, date: value })}
+        />
+
+        <Text style={styles.label}>Morning Yield (L)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0.00"
+          value={formData.morningYield}
+          onChangeText={(value) => setFormData({ ...formData, morningYield: value })}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Evening Yield (L)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0.00"
+          value={formData.eveningYield}
+          onChangeText={(value) => setFormData({ ...formData, eveningYield: value })}
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Quality</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.quality}
+          onChangeText={(value) => setFormData({ ...formData, quality: value })}
+        />
+
+        <Text style={styles.label}>Notes</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Optional notes"
+          value={formData.notes}
+          onChangeText={(value) => setFormData({ ...formData, notes: value })}
+          multiline
+        />
+
+        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isSubmitting}>
+          <Text style={styles.buttonText}>{isSubmitting ? 'Adding...' : 'Add Record'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.subtitle}>Recent Records</Text>
+      <FlatList
+        data={records.slice(0, 10)} // Show last 10
+        renderItem={renderRecord}
+        keyExtractor={(item) => item._id}
+        scrollEnabled={false}
+      />
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  form: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 10,
+    marginBottom: 15,
+    borderRadius: 5,
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#28a745',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  recordItem: {
+    backgroundColor: 'white',
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+});
+
+export default MilkProduction;

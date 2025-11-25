@@ -26,6 +26,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/recurring-expenses', require('./routes/recurringExpenses'));
+app.use('/api/currencies', require('./routes/currencies'));
 
 // Serve static client in production
 if (process.env.NODE_ENV === 'production') {

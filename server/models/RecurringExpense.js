@@ -69,7 +69,7 @@ const recurringExpenseSchema = new mongoose.Schema({
 recurringExpenseSchema.pre('save', function(next) {
   if (this.isModified('lastPurchaseDate') || this.isModified('frequency')) {
     const lastDate = new Date(this.lastPurchaseDate);
-    
+
     switch(this.frequency) {
       case 'daily':
         this.nextPurchaseDate = new Date(lastDate.setDate(lastDate.getDate() + 1));
@@ -82,6 +82,7 @@ recurringExpenseSchema.pre('save', function(next) {
         break;
     }
   }
+
   this.updatedAt = Date.now();
   next();
 });

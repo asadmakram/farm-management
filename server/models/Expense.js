@@ -19,7 +19,7 @@ const expenseSchema = new mongoose.Schema({
       'equipment_purchase',
       'land_improvement',
       'building_construction',
-      
+
       // Operating Expenses (Monthly/Recurring)
       'feed',
       'labour',

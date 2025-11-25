@@ -467,6 +467,13 @@ tbody tr:hover {
   color: #991b1b;
 }
 
+.status-badge.currency {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 .btn-success {
   background: #10b981;
   color: white;

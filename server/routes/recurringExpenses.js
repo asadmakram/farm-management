@@ -15,15 +15,15 @@ router.get('/', auth, async (req, res) => {
     
     const expenses = await RecurringExpense.find(filter).sort({ expenseType: 1 });
     
-    // Calculate total monthly cost
+    // Calculate total monthly cost (using base currency for consistent reporting)
     const activeExpenses = await RecurringExpense.find({ userId: req.user.id, isActive: true });
     let monthlyTotal = 0;
-    
+
     activeExpenses.forEach(expense => {
-      const amount = expense.expenseType === 'worker_wage' 
-        ? expense.amount * expense.workerCount 
-        : expense.amount;
-        
+      const amount = expense.expenseType === 'worker_wage'
+        ? (expense.amountBase || expense.amount) * expense.workerCount
+        : (expense.amountBase || expense.amount);
+
       switch(expense.frequency) {
         case 'daily':
           monthlyTotal += amount * 30;
@@ -52,10 +52,18 @@ router.get('/', auth, async (req, res) => {
 // Create a new recurring expense
 router.post('/', auth, async (req, res) => {
   try {
-    const expense = new RecurringExpense({
+    const expenseData = {
       ...req.body,
       userId: req.user.id
-    });
+    };
+
+    // Set default currency if not provided
+    if (!expenseData.currency) {
+      expenseData.currency = 'INR';
+      expenseData.exchangeRate = 1;
+    }
+
+    const expense = new RecurringExpense(expenseData);
     await expense.save();
     res.status(201).json(expense);
   } catch (error) {

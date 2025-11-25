@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../utils/api';
 
 const AuthContext = createContext();
@@ -16,13 +17,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const loadUser = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const storedUser = await AsyncStorage.getItem('user');
+
+        if (token && storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (err) {
+        // swallow and continue so UI doesn't hang
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // safety fallback: ensure loading doesn't remain true indefinitely
+    const timeout = setTimeout(() => setLoading(false), 5000);
+    loadUser().finally(() => clearTimeout(timeout));
   }, []);
 
   const login = async (email, password) => {
@@ -30,8 +42,8 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       
       return { success: true };
@@ -48,8 +60,8 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/register', userData);
       const { token, user } = response.data;
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       
       return { success: true };
@@ -61,9 +73,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
     setUser(null);
   };
 

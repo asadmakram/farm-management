@@ -7,6 +7,7 @@ import './PageStyles.css';
 const MilkSales = () => {
   const [sales, setSales] = useState([]);
   const [contracts, setContracts] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
   const defaultSummary = {
     totalQuantity: 0,
     totalRevenue: 0,
@@ -31,12 +32,15 @@ const MilkSales = () => {
     customerName: '',
     ratePerLiter: '',
     paymentStatus: 'pending',
+    currency: 'INR',
+    exchangeRate: 1,
     notes: ''
   });
 
   useEffect(() => {
     fetchSales();
     fetchContracts();
+    fetchCurrencies();
   }, []);
 
   const fetchSales = async () => {
@@ -59,6 +63,16 @@ const MilkSales = () => {
     } catch (error) {
       console.error('Error fetching contracts');
       setContracts([]);
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      const response = await api.get('/currencies');
+      setCurrencies(response.data.currencies || []);
+    } catch (error) {
+      console.error('Error fetching currencies');
+      setCurrencies([]);
     }
   };
 
@@ -108,6 +122,8 @@ const MilkSales = () => {
       customerName: '',
       ratePerLiter: '',
       paymentStatus: 'pending',
+      currency: 'INR',
+      exchangeRate: 1,
       notes: ''
     });
   };
@@ -117,6 +133,15 @@ const MilkSales = () => {
       ...formData,
       saleType: type,
       ratePerLiter: type === 'bandhi' ? '182.5' : type === 'door_to_door' ? '220' : ''
+    });
+  };
+
+  const handleCurrencyChange = (currencyCode) => {
+    const selectedCurrency = currencies.find(c => c.code === currencyCode);
+    setFormData({
+      ...formData,
+      currency: currencyCode,
+      exchangeRate: selectedCurrency ? selectedCurrency.exchangeRate : 1
     });
   };
 
@@ -208,6 +233,7 @@ const MilkSales = () => {
                 <th className="text-right">Quantity (L)</th>
                 <th className="text-right">Rate/L</th>
                 <th className="text-right">Total</th>
+                <th className="text-center">Currency</th>
                 <th className="text-center">Payment Status</th>
                 <th className="text-center">Actions</th>
               </tr>
@@ -234,8 +260,13 @@ const MilkSales = () => {
                     ) : '-'}
                   </td>
                   <td data-label="Quantity" className="text-right">{sale.quantity}</td>
-                  <td data-label="Rate/L" className="text-right">₹{sale.ratePerLiter.toFixed(2)}</td>
-                  <td data-label="Total" className="text-right"><strong>₹{sale.totalAmount.toFixed(2)}</strong></td>
+                  <td data-label="Rate/L" className="text-right">{sale.currency} {sale.ratePerLiter.toFixed(2)}</td>
+                  <td data-label="Total" className="text-right"><strong>{sale.currency} {sale.totalAmount.toFixed(2)}</strong></td>
+                  <td data-label="Currency" className="text-center">
+                    <span className="status-badge currency">
+                      {sale.currency}
+                    </span>
+                  </td>
                   <td data-label="Payment" className="text-center">
                     <select 
                       className={`status-select ${sale.paymentStatus}`}
@@ -315,34 +346,43 @@ const MilkSales = () => {
                 </div>
               </div>
 
-              {/* Basic Information */}
+              {/* Currency Selection */}
               <div className="form-section">
                 <div className="form-section-title">
-                  <span>📋</span>
-                  <span>Basic Information</span>
+                  <span>💱</span>
+                  <span>Currency</span>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">📅 Date *</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={formData.date}
-                      onChange={e => setFormData({...formData, date: e.target.value})}
+                    <label className="form-label">💱 Currency *</label>
+                    <select
+                      className="form-select"
+                      value={formData.currency}
+                      onChange={(e) => handleCurrencyChange(e.target.value)}
                       required
-                    />
+                    >
+                      <option value="">Select currency</option>
+                      {currencies.map(currency => (
+                        <option key={currency.code} value={currency.code}>
+                          {currency.symbol} {currency.name} ({currency.code})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">🥛 Quantity (Liters) *</label>
+                    <label className="form-label">📊 Exchange Rate (to INR)</label>
                     <input
                       type="number"
-                      step="0.01"
                       className="form-input"
-                      value={formData.quantity}
-                      onChange={e => setFormData({...formData, quantity: e.target.value})}
-                      placeholder="0.00"
-                      required
+                      value={formData.exchangeRate}
+                      onChange={e => setFormData({...formData, exchangeRate: parseFloat(e.target.value) || 1})}
+                      placeholder="1.00"
+                      min="0"
+                      step="0.01"
                     />
+                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      1 {formData.currency} = {formData.exchangeRate} INR
+                    </small>
                   </div>
                 </div>
               </div>
