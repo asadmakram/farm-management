@@ -170,7 +170,7 @@ router.get('/sales', auth, async (req, res) => {
       .populate('contractId', 'vendorName ratePerLiter')
       .sort({ date: -1 });
 
-    // Calculate summary by sale type
+    // Calculate summary by sale type (using base currency for consistent reporting)
     const summary = {
       totalQuantity: 0,
       totalRevenue: 0,
@@ -183,26 +183,26 @@ router.get('/sales', auth, async (req, res) => {
 
     sales.forEach(sale => {
       summary.totalQuantity += sale.quantity;
-      summary.totalRevenue += sale.totalAmount;
-      
+      summary.totalRevenue += sale.totalAmountBase || sale.totalAmount;
+
       if (sale.saleType === 'bandhi') {
         summary.bandhi.quantity += sale.quantity;
-        summary.bandhi.revenue += sale.totalAmount;
+        summary.bandhi.revenue += sale.totalAmountBase || sale.totalAmount;
         summary.bandhi.count++;
       } else if (sale.saleType === 'mandi') {
         summary.mandi.quantity += sale.quantity;
-        summary.mandi.revenue += sale.totalAmount;
+        summary.mandi.revenue += sale.totalAmountBase || sale.totalAmount;
         summary.mandi.count++;
       } else if (sale.saleType === 'door_to_door') {
         summary.door_to_door.quantity += sale.quantity;
-        summary.door_to_door.revenue += sale.totalAmount;
+        summary.door_to_door.revenue += sale.totalAmountBase || sale.totalAmount;
         summary.door_to_door.count++;
       }
-      
+
       if (sale.paymentStatus === 'pending') {
-        summary.pending += sale.totalAmount;
+        summary.pending += sale.totalAmountBase || sale.totalAmount;
       } else if (sale.paymentStatus === 'received') {
-        summary.received += sale.totalAmount;
+        summary.received += sale.totalAmountBase || sale.totalAmount;
       }
     });
 
@@ -228,7 +228,9 @@ router.post(
     body('date').notEmpty().withMessage('Date is required'),
     body('quantity').isFloat({ min: 0 }).withMessage('Quantity must be positive'),
     body('saleType').isIn(['bandhi', 'mandi', 'door_to_door']).withMessage('Invalid sale type'),
-    body('ratePerLiter').isFloat({ min: 0 }).withMessage('Rate must be positive')
+    body('ratePerLiter').isFloat({ min: 0 }).withMessage('Rate must be positive'),
+    body('currency').optional().isLength({ min: 3, max: 3 }).withMessage('Currency code must be 3 characters'),
+    body('exchangeRate').optional().isFloat({ min: 0 }).withMessage('Exchange rate must be positive')
   ],
   async (req, res) => {
     try {
@@ -242,17 +244,23 @@ router.post(
         userId: req.user._id
       };
 
+      // Set default currency if not provided
+      if (!saleData.currency) {
+        saleData.currency = 'INR';
+        saleData.exchangeRate = 1;
+      }
+
       const sale = new MilkSale(saleData);
       await sale.save();
-      
+
       if (sale.contractId) {
         await sale.populate('contractId', 'vendorName ratePerLiter');
       }
 
-      res.status(201).json({ 
-        success: true, 
-        message: 'Milk sale recorded successfully', 
-        data: sale 
+      res.status(201).json({
+        success: true,
+        message: 'Milk sale recorded successfully',
+        data: sale
       });
     } catch (error) {
       console.error('Create milk sale error:', error);

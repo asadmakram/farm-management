@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Dairy Farm Manager",
+    "slug": "dairy-farm-manager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dairyfarm.manager"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.dairyfarm.manager",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "port": 3000
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d8fd69ab-1ec2-40c9-9b4b-75d99775cc4f"
+      }
+    },
+    "owner": "asadmakram"
+  }
+}

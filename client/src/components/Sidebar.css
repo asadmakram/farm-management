@@ -1,0 +1,123 @@
+/* Sidebar Styles */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+  overflow-x: visible;
+}
+
+.sidebar-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.sidebar-nav .nav-link {
+  margin-bottom: 0.25rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav .nav-link:hover {
+  background-color: #f8f9fa;
+  color: #0d6efd !important;
+  transform: translateX(4px);
+}
+
+.sidebar-nav .nav-link.active {
+  background-color: #0d6efd;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+/* Collapsed state adjustments */
+.sidebar.collapsed .sidebar-nav .nav-link {
+  justify-content: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.sidebar.collapsed .sidebar-nav .nav-link span:not(.me-3) {
+  display: none;
+}
+
+/* Dropdown adjustments for collapsed sidebar */
+.sidebar.collapsed .dropdown-menu {
+  position: fixed !important;
+  left: 70px !important;
+  top: auto !important;
+  transform: none !important;
+  margin: 0;
+}
+
+/* Ensure icons are always visible */
+.sidebar .me-3,
+.sidebar .me-2 {
+  flex-shrink: 0;
+}
+
+/* Smooth transitions */
+.sidebar *,
+.sidebar-nav .nav-link,
+.sidebar-footer button {
+  transition: all 0.3s ease;
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.show {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+}

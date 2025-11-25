@@ -62,6 +62,9 @@ router.get('/', auth, async (req, res) => {
     const monthRevenue = monthSales.reduce((sum, s) => sum + s.totalAmount, 0);
     const monthSalesQuantity = monthSales.reduce((sum, s) => sum + s.quantity, 0);
 
+    const totalSales = await MilkSale.find({ userId });
+    const totalRevenue = totalSales.reduce((sum, s) => sum + s.totalAmount, 0);
+
     const lastMonthSales = await MilkSale.find({
       userId,
       date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
@@ -80,6 +83,9 @@ router.get('/', auth, async (req, res) => {
     });
     const monthTotalExpenses = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+    const totalExpenses = await Expense.find({ userId });
+    const totalExpensesAmount = totalExpenses.reduce((sum, e) => sum + e.amount, 0);
+
     const expensesByCategory = monthExpenses.reduce((acc, expense) => {
       if (!acc[expense.category]) {
         acc[expense.category] = 0;
@@ -90,7 +96,12 @@ router.get('/', auth, async (req, res) => {
 
     // Calculate profit
     const monthProfit = monthRevenue - monthTotalExpenses;
+    const totalProfit = totalRevenue - totalExpensesAmount;
     const profitMargin = monthRevenue > 0 ? ((monthProfit / monthRevenue) * 100).toFixed(2) : 0;
+
+    // Calculate average daily milk production for this month
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const averageDaily = daysInMonth > 0 ? (monthYield / daysInMonth).toFixed(2) : 0;
 
     // Get upcoming vaccinations (next 30 days)
     const thirtyDaysFromNow = new Date();
@@ -163,25 +174,20 @@ router.get('/', auth, async (req, res) => {
           female: femaleAnimals
         },
         milk: {
-          todayYield,
-          monthYield,
-          yieldTrend: parseFloat(yieldTrend),
-          weeklyTrend: weekProduction
+          thisMonth: monthYield,
+          averageDaily: parseFloat(averageDaily)
         },
         sales: {
-          monthRevenue,
-          monthQuantity: monthSalesQuantity,
-          revenueTrend: parseFloat(revenueTrend),
-          salesByType
+          thisMonth: monthRevenue,
+          total: totalRevenue
         },
         expenses: {
-          monthTotal: monthTotalExpenses,
-          byCategory: expensesByCategory
+          thisMonth: monthTotalExpenses,
+          total: totalExpensesAmount
         },
         profitLoss: {
-          monthProfit,
-          profitMargin: parseFloat(profitMargin),
-          status: monthProfit >= 0 ? 'profit' : 'loss'
+          thisMonth: monthProfit,
+          total: totalProfit
         },
         alerts: {
           upcomingVaccinations,

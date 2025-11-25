@@ -32,6 +32,19 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  preferredCurrency: {
+    type: String,
+    default: 'INR',
+    uppercase: true
+  },
+  country: {
+    type: String,
+    trim: true
+  },
+  city: {
+    type: String,
+    trim: true
+  },
   subscription: {
     plan: {
       type: String,

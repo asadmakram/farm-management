@@ -15,19 +15,19 @@ router.get('/', auth, async (req, res) => {
     
     const contracts = await Contract.find(filter).sort({ startDate: -1 });
     
-    // Calculate summary
+    // Calculate summary (using base currency for consistent reporting)
     const summary = {
       active: await Contract.countDocuments({ userId: req.user.id, status: 'active' }),
       totalAdvanceHeld: 0,
       totalAdvanceReturned: 0
     };
-    
+
     const allContracts = await Contract.find({ userId: req.user.id });
     allContracts.forEach(contract => {
       if (contract.advanceStatus === 'held') {
-        summary.totalAdvanceHeld += contract.advanceAmount;
+        summary.totalAdvanceHeld += contract.advanceAmountBase || contract.advanceAmount;
       } else if (contract.advanceStatus === 'returned') {
-        summary.totalAdvanceReturned += contract.advanceAmount;
+        summary.totalAdvanceReturned += contract.advanceAmountBase || contract.advanceAmount;
       }
     });
     
@@ -40,10 +40,18 @@ router.get('/', auth, async (req, res) => {
 // Create a new contract
 router.post('/', auth, async (req, res) => {
   try {
-    const contract = new Contract({
+    const contractData = {
       ...req.body,
       userId: req.user.id
-    });
+    };
+
+    // Set default currency if not provided
+    if (!contractData.currency) {
+      contractData.currency = 'INR';
+      contractData.exchangeRate = 1;
+    }
+
+    const contract = new Contract(contractData);
     await contract.save();
     res.status(201).json(contract);
   } catch (error) {

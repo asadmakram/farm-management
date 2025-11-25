@@ -61,7 +61,8 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
-          farmName: user.farmName
+          farmName: user.farmName,
+          preferredCurrency: user.preferredCurrency
         }
       });
     } catch (error) {
@@ -125,7 +126,8 @@ router.post(
           id: user._id,
           name: user.name,
           email: user.email,
-          farmName: user.farmName
+          farmName: user.farmName,
+          preferredCurrency: user.preferredCurrency
         }
       });
     } catch (error) {
@@ -152,6 +154,9 @@ router.get('/me', auth, async (req, res) => {
         farmName: req.user.farmName,
         phoneNumber: req.user.phoneNumber,
         address: req.user.address,
+        preferredCurrency: req.user.preferredCurrency,
+        country: req.user.country,
+        city: req.user.city,
         subscription: req.user.subscription
       }
     });
@@ -160,6 +165,156 @@ router.get('/me', auth, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error' 
+    });
+  }
+});
+
+// @route   PUT /api/auth/update-currency
+// @desc    Update user's preferred currency
+// @access  Private
+router.put('/update-currency', auth, async (req, res) => {
+  try {
+    const { preferredCurrency } = req.body;
+
+    if (!preferredCurrency) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preferred currency is required'
+      });
+    }
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferredCurrency: preferredCurrency.toUpperCase() },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Currency preference updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        farmName: user.farmName,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        preferredCurrency: user.preferredCurrency,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Update currency error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   PUT /api/auth/preferred-currency
+// @desc    Update user's preferred currency (legacy route)
+// @access  Private
+router.put('/preferred-currency', auth, async (req, res) => {
+  try {
+    const { preferredCurrency } = req.body;
+
+    if (!preferredCurrency) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preferred currency is required'
+      });
+    }
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferredCurrency },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Preferred currency updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        farmName: user.farmName,
+        preferredCurrency: user.preferredCurrency
+      }
+    });
+  } catch (error) {
+    console.error('Update preferred currency error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   PUT /api/auth/settings
+// @desc    Update user settings
+// @access  Private
+router.put('/settings', auth, async (req, res) => {
+  try {
+    const { preferredCurrency, country, city } = req.body;
+
+    const updateData = {};
+    if (preferredCurrency !== undefined) updateData.preferredCurrency = preferredCurrency;
+    if (country !== undefined) updateData.country = country;
+    if (city !== undefined) updateData.city = city;
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        farmName: user.farmName,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        preferredCurrency: user.preferredCurrency,
+        country: user.country,
+        city: user.city,
+        subscription: user.subscription
+      }
+    });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });

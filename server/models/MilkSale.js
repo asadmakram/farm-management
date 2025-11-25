@@ -71,12 +71,13 @@ milkSaleSchema.pre('validate', function(next) {
   const qty = Number(this.quantity) || 0;
   const rate = Number(this.ratePerLiter) || 0;
   const packaging = Number(this.packagingCost) || 0;
-  
+
   if (this.saleType === 'door_to_door') {
     this.totalAmount = qty * (rate + packaging);
   } else {
     this.totalAmount = qty * rate;
   }
+
   next();
 });
 

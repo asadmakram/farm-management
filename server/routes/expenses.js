@@ -35,14 +35,14 @@ router.get('/', auth, async (req, res) => {
       .populate('animalId', 'tagNumber name')
       .sort({ date: -1 });
 
-    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    
+    const totalAmount = expenses.reduce((sum, expense) => sum + (expense.amountBase || expense.amount), 0);
+
     // Segregate by expense type
     const assetExpenses = expenses.filter(e => e.expenseType === 'asset');
     const operatingExpenses = expenses.filter(e => e.expenseType === 'operating');
-    
-    const totalAssets = assetExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const totalOperating = operatingExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+    const totalAssets = assetExpenses.reduce((sum, e) => sum + (e.amountBase || e.amount), 0);
+    const totalOperating = operatingExpenses.reduce((sum, e) => sum + (e.amountBase || e.amount), 0);
 
     res.json({ 
       success: true, 
@@ -72,7 +72,9 @@ router.post(
     body('date').notEmpty().withMessage('Date is required'),
     body('category').notEmpty().withMessage('Category is required'),
     body('animalId').optional({ nullable: true }).isMongoId().withMessage('Invalid animal ID'),
-    body('amount').isFloat({ min: 0 }).withMessage('Amount must be a positive number')
+    body('amount').isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
+    body('currency').optional().isLength({ min: 3, max: 3 }).withMessage('Currency code must be 3 characters'),
+    body('exchangeRate').optional().isFloat({ min: 0 }).withMessage('Exchange rate must be positive')
   ],
   async (req, res) => {
     try {
@@ -92,13 +94,19 @@ router.post(
         userId: req.user._id
       };
 
+      // Set default currency if not provided
+      if (!expenseData.currency) {
+        expenseData.currency = 'INR';
+        expenseData.exchangeRate = 1;
+      }
+
       const expense = new Expense(expenseData);
       await expense.save();
 
-      res.status(201).json({ 
-        success: true, 
-        message: 'Expense added successfully', 
-        data: expense 
+      res.status(201).json({
+        success: true,
+        message: 'Expense added successfully',
+        data: expense
       });
     } catch (error) {
       console.error('Create expense error:', error);
