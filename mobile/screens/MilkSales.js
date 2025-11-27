@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator, Modal, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator, Modal, RefreshControl, Dimensions, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ const { width } = Dimensions.get('window');
 
 const MilkSales = () => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [sales, setSales] = useState([]);
   const [contracts, setContracts] = useState([]);
   const defaultSummary = {
@@ -65,7 +67,7 @@ const MilkSales = () => {
       setContracts(contractsRes.data.contracts || []);
       setLoading(false);
     } catch (error) {
-      Alert.alert('Error', 'Error fetching data');
+      Alert.alert(t('common.error'), t('sales.fetchError'));
       setLoading(false);
     }
   };
@@ -78,7 +80,7 @@ const MilkSales = () => {
 
   const handleSubmit = async () => {
     if (!formData.quantity || !formData.ratePerLiter) {
-      Alert.alert('Error', 'Please fill quantity and rate');
+      Alert.alert(t('common.error'), t('sales.fillQuantityRate'));
       return;
     }
     setIsSubmitting(true);
@@ -94,12 +96,12 @@ const MilkSales = () => {
       if (formData.saleType !== 'door_to_door') delete payload.packagingCost;
 
       await api.post('/milk/sales', payload);
-      Alert.alert('Success', 'Milk sale recorded successfully');
+      Alert.alert(t('common.success'), t('sales.recordSuccess'));
       setShowModal(false);
       resetForm();
       fetchData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error saving sale');
+      Alert.alert(t('common.error'), error.response?.data?.message || t('sales.recordError'));
     }
     setIsSubmitting(false);
   };
@@ -107,10 +109,10 @@ const MilkSales = () => {
   const updatePaymentStatus = async (saleId, newStatus) => {
     try {
       await api.put(`/milk/sales/${saleId}`, { paymentStatus: newStatus });
-      Alert.alert('Success', 'Payment status updated');
+      Alert.alert(t('common.success'), t('sales.updatePaymentSuccess'));
       fetchData();
     } catch (error) {
-      Alert.alert('Error', 'Error updating payment status');
+      Alert.alert(t('common.error'), t('sales.updatePaymentError'));
     }
   };
 
@@ -148,9 +150,9 @@ const MilkSales = () => {
 
   const getSaleTypeLabel = (type) => {
     switch (type) {
-      case 'bandhi': return '📋 Bandhi';
-      case 'mandi': return '🏪 Mandi';
-      case 'door_to_door': return '🚪 Door Delivery';
+      case 'bandhi': return `📋 ${t('sales.bandhi')}`;
+      case 'mandi': return `🏪 ${t('sales.mandi')}`;
+      case 'door_to_door': return `🚪 ${t('sales.doorToDoor')}`;
       default: return type;
     }
   };
@@ -166,7 +168,7 @@ const MilkSales = () => {
 
   const handleAddPayment = async () => {
     if (!paymentData.amount || Number(paymentData.amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid payment amount');
+      Alert.alert(t('common.error'), t('sales.invalidPaymentAmount'));
       return;
     }
 
@@ -178,7 +180,7 @@ const MilkSales = () => {
         date: paymentData.date,
         notes: paymentData.notes
       });
-      Alert.alert('Success', 'Payment added successfully');
+      Alert.alert(t('common.success'), t('sales.addPaymentSuccess'));
       setShowPaymentModal(false);
       setPaymentData({
         amount: '',
@@ -188,7 +190,7 @@ const MilkSales = () => {
       });
       fetchData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error adding payment');
+      Alert.alert(t('common.error'), error.response?.data?.message || t('sales.addPaymentError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -215,8 +217,8 @@ const MilkSales = () => {
         <View style={styles.saleTopRow}>
           <View style={styles.customerInfo}>
             <Ionicons name="person-outline" size={12} color="#64748b" />
-            <Text style={styles.customerName} numberOfLines={1}>
-              {item.contractId?.vendorName || item.customerName || 'Walk-in'}
+            <Text style={[styles.customerName, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]} numberOfLines={1}>
+              {item.contractId?.vendorName || item.customerName || t('sales.walkIn')}
             </Text>
           </View>
           <View style={[styles.paymentBadge, { backgroundColor: getPaymentColor(item.paymentStatus) + '15' }]}>
@@ -225,8 +227,8 @@ const MilkSales = () => {
               size={10}
               color={getPaymentColor(item.paymentStatus)}
             />
-            <Text style={[styles.paymentText, { color: getPaymentColor(item.paymentStatus) }]}>
-              {item.paymentStatus}
+            <Text style={[styles.paymentText, { color: getPaymentColor(item.paymentStatus), textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+              {t(`sales.status.${item.paymentStatus}`) || item.paymentStatus}
             </Text>
           </View>
         </View>
@@ -234,26 +236,26 @@ const MilkSales = () => {
         {/* Middle Row: Type Badge + Date */}
         <View style={styles.saleMiddleRow}>
           <View style={[styles.saleTypeBadge, { backgroundColor: getSaleTypeColor(item.saleType) + '15' }]}>
-            <Text style={[styles.saleTypeText, { color: getSaleTypeColor(item.saleType) }]}>
+            <Text style={[styles.saleTypeText, { color: getSaleTypeColor(item.saleType), textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
               {getSaleTypeLabel(item.saleType)}
             </Text>
           </View>
-          <Text style={styles.saleDate}>{new Date(item.date).toLocaleDateString()}</Text>
+          <Text style={[styles.saleDate, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{new Date(item.date).toLocaleDateString()}</Text>
         </View>
 
         {/* Bottom Row: Quantity, Rate, Total */}
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Qty</Text>
-            <Text style={styles.detailValue}>{item.quantity}L</Text>
+            <Text style={[styles.detailLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('sales.quantity')}</Text>
+            <Text style={[styles.detailValue, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{item.quantity}L</Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Rate</Text>
-            <Text style={styles.detailValue}>Rs {item.ratePerLiter?.toFixed(0)}</Text>
+            <Text style={[styles.detailLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('sales.rate')}</Text>
+            <Text style={[styles.detailValue, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>Rs {item.ratePerLiter?.toFixed(0)}</Text>
           </View>
           <View style={[styles.detailItem, styles.totalItem]}>
-            <Text style={styles.detailLabel}>Total</Text>
-            <Text style={[styles.detailValue, styles.totalValue]}>Rs {item.totalAmount?.toFixed(0)}</Text>
+            <Text style={[styles.detailLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('common.total')}</Text>
+            <Text style={[styles.detailValue, styles.totalValue, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>Rs {item.totalAmount?.toFixed(0)}</Text>
           </View>
         </View>
 
@@ -273,8 +275,8 @@ const MilkSales = () => {
               onPress={() => openPaymentModal(item)}
               activeOpacity={0.7}
             >
-              <Ionicons name="wallet-outline" size={14} color="#3b82f6" />
-              <Text style={styles.addPaymentText}>Pay</Text>
+                <Ionicons name="wallet-outline" size={14} color="#3b82f6" />
+                <Text style={[styles.addPaymentText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.pay')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -286,7 +288,7 @@ const MilkSales = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading sales...</Text>
+        <Text style={[styles.loadingText, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('sales.loading')}</Text>
       </View>
     );
   }
@@ -295,8 +297,8 @@ const MilkSales = () => {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Text style={styles.title}>💰 Milk Sales</Text>
-          <Text style={styles.subtitle}>Rs {(summary.totalRevenue || 0).toFixed(0)} total revenue</Text>
+          <Text style={[styles.title, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>💰 {t('sales.title')}</Text>
+          <Text style={[styles.subtitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.revenueSummary', { amount: (summary.totalRevenue || 0).toFixed(0) })}</Text>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
           <Ionicons name="add" size={24} color="white" />
@@ -307,22 +309,22 @@ const MilkSales = () => {
         {/* Summary Cards */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.summaryScroll}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>📋 Bandhi</Text>
+            <Text style={[styles.summaryLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>📋 {t('sales.bandhi')}</Text>
             <Text style={[styles.summaryValue, { color: '#2563eb' }]}>{summary.bandhi?.quantity || 0}L</Text>
             <Text style={styles.summarySubtext}>Rs {(summary.bandhi?.revenue || 0).toFixed(0)}</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>🏪 Mandi</Text>
+            <Text style={[styles.summaryLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>🏪 {t('sales.mandi')}</Text>
             <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>{summary.mandi?.quantity || 0}L</Text>
             <Text style={styles.summarySubtext}>Rs {(summary.mandi?.revenue || 0).toFixed(0)}</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>🚪 Door-to-Door</Text>
+            <Text style={[styles.summaryLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>🚪 {t('sales.doorToDoor')}</Text>
             <Text style={[styles.summaryValue, { color: '#10b981' }]}>{summary.door_to_door?.quantity || 0}L</Text>
             <Text style={styles.summarySubtext}>Rs {(summary.door_to_door?.revenue || 0).toFixed(0)}</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>⏳ Pending</Text>
+            <Text style={[styles.summaryLabel, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('sales.status.pendingEmoji') || '⏳ ' + t('sales.status.pending')}</Text>
             <Text style={[styles.summaryValue, { color: '#ef4444' }]}>Rs {(summary.pending || 0).toFixed(0)}</Text>
           </View>
         </ScrollView>
@@ -335,8 +337,8 @@ const MilkSales = () => {
               style={[styles.filterTab, filterType === type && styles.filterTabActive]}
               onPress={() => setFilterType(type)}
             >
-              <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive]}>
-                {type === 'all' ? 'All' : getSaleTypeLabel(type)}
+              <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>
+                {type === 'all' ? t('sales.all') : getSaleTypeLabel(type)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -354,10 +356,10 @@ const MilkSales = () => {
       ) : (
         <View style={styles.emptyState}>
           <Ionicons name="cash-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No sales recorded yet</Text>
+          <Text style={[styles.emptyStateText, { textAlign: I18nManager.isRTL ? 'right' : 'center' }]}>{t('sales.noSales')}</Text>
           <TouchableOpacity style={styles.emptyStateButton} onPress={() => setShowModal(true)}>
             <Ionicons name="add" size={20} color="white" />
-            <Text style={styles.emptyStateButtonText}>Record First Sale</Text>
+            <Text style={[styles.emptyStateButtonText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.recordFirstSale')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -367,7 +369,7 @@ const MilkSales = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Record Milk Sale</Text>
+                <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.recordTitle')}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -376,7 +378,7 @@ const MilkSales = () => {
             <ScrollView style={styles.modalBody}>
               {/* Sale Type Selection */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Sale Type</Text>
+                <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.saleType')}</Text>
                 <View style={styles.saleTypeSelector}>
                   {['bandhi', 'mandi', 'door_to_door'].map((type) => (
                     <TouchableOpacity
@@ -393,7 +395,7 @@ const MilkSales = () => {
               </View>
 
               <DatePickerInput
-                label="Date"
+                label={t('common.date')}
                 value={formData.date}
                 onChange={(date) => setFormData({ ...formData, date })}
                 themeColor="#10b981"
@@ -402,7 +404,7 @@ const MilkSales = () => {
 
               {formData.saleType === 'bandhi' && contracts.length > 0 && (
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Contract</Text>
+                  <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.contract')}</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.contractId}
@@ -416,7 +418,7 @@ const MilkSales = () => {
                       }}
                       style={styles.picker}
                     >
-                      <Picker.Item label="Select Contract" value="" />
+                      <Picker.Item label={t('sales.selectContract')} value="" />
                       {contracts.map(c => (
                         <Picker.Item key={c._id} label={`${c.vendorName} - Rs ${c.ratePerLiter}/L`} value={c._id} />
                       ))}
@@ -427,19 +429,19 @@ const MilkSales = () => {
 
               {(formData.saleType === 'bandhi' || formData.saleType === 'mandi') && (
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Time of Day</Text>
+                  <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.timeOfDay')}</Text>
                   <View style={styles.timeSelector}>
                     <TouchableOpacity
                       style={[styles.timeOption, formData.timeOfDay === 'morning' && styles.timeOptionActive]}
                       onPress={() => setFormData({ ...formData, timeOfDay: 'morning' })}
                     >
-                      <Text style={[styles.timeText, formData.timeOfDay === 'morning' && styles.timeTextActive]}>🌅 Morning</Text>
+                      <Text style={[styles.timeText, formData.timeOfDay === 'morning' && styles.timeTextActive]}>{t('sales.morning')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.timeOption, formData.timeOfDay === 'evening' && styles.timeOptionActive]}
                       onPress={() => setFormData({ ...formData, timeOfDay: 'evening' })}
                     >
-                      <Text style={[styles.timeText, formData.timeOfDay === 'evening' && styles.timeTextActive]}>🌆 Evening</Text>
+                      <Text style={[styles.timeText, formData.timeOfDay === 'evening' && styles.timeTextActive]}>{t('sales.evening')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -473,7 +475,7 @@ const MilkSales = () => {
               {formData.saleType === 'door_to_door' && (
                 <>
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Packaging Cost/L</Text>
+                    <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.packagingCostPerL')}</Text>
                     <TextInput
                       style={styles.formInput}
                       value={formData.packagingCost}
@@ -484,7 +486,7 @@ const MilkSales = () => {
                     />
                   </View>
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Customer Name</Text>
+                    <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.customer')}</Text>
                     <TextInput
                       style={styles.formInput}
                       value={formData.customerName}
@@ -497,7 +499,7 @@ const MilkSales = () => {
               )}
 
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Payment Status</Text>
+                <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.paymentStatus')}</Text>
                 <View style={styles.paymentSelector}>
                   {['pending', 'received'].map((status) => (
                     <TouchableOpacity
@@ -506,7 +508,7 @@ const MilkSales = () => {
                       onPress={() => setFormData({ ...formData, paymentStatus: status })}
                     >
                       <Text style={[styles.paymentOptionText, formData.paymentStatus === status && styles.paymentOptionTextActive]}>
-                        {status === 'pending' ? '⏳ Pending' : '✅ Received'}
+                        {status === 'pending' ? `⏳ ${t('sales.status.pending')}` : `✅ ${t('sales.status.received')}`}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -523,7 +525,7 @@ const MilkSales = () => {
                 <View style={styles.totalPreviewContent}>
                   <Ionicons name="wallet-outline" size={24} color="#10b981" />
                   <View style={styles.totalPreviewTextContainer}>
-                    <Text style={styles.totalPreviewLabel}>Total Amount</Text>
+                    <Text style={[styles.totalPreviewLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.totalAmount')}</Text>
                     <Text style={styles.totalPreviewValue}>
                       Rs {(
                         (Number(formData.quantity || 0) * Number(formData.ratePerLiter || 0)) +
@@ -537,14 +539,14 @@ const MilkSales = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? 'Recording...' : 'Record Sale'}</Text>
+                <Text style={styles.submitButtonText}>{isSubmitting ? t('sales.recording') : t('sales.recordSale')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -556,7 +558,7 @@ const MilkSales = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.paymentModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Payment</Text>
+              <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.addPaymentTitle')}</Text>
               <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -566,27 +568,27 @@ const MilkSales = () => {
               {selectedSale && (
                 <>
                   <View style={styles.paymentSummaryCard}>
-                    <Text style={styles.paymentSummaryTitle}>Sale Details</Text>
+                    <Text style={[styles.paymentSummaryTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.saleDetails')}</Text>
                     <View style={styles.paymentSummaryRow}>
-                      <Text style={styles.paymentSummaryLabel}>Customer:</Text>
-                      <Text style={styles.paymentSummaryValue}>{selectedSale.customerName || 'N/A'}</Text>
+                      <Text style={styles.paymentSummaryLabel}>{t('sales.customerLabel')}</Text>
+                      <Text style={styles.paymentSummaryValue}>{selectedSale.customerName || t('common.na')}</Text>
                     </View>
                     <View style={styles.paymentSummaryRow}>
-                      <Text style={styles.paymentSummaryLabel}>Total Amount:</Text>
+                      <Text style={styles.paymentSummaryLabel}>{t('sales.totalAmountLabel')}</Text>
                       <Text style={styles.paymentSummaryValue}>Rs {selectedSale.totalAmount?.toFixed(0)}</Text>
                     </View>
                     <View style={styles.paymentSummaryRow}>
-                      <Text style={styles.paymentSummaryLabel}>Amount Paid:</Text>
+                      <Text style={styles.paymentSummaryLabel}>{t('sales.amountPaidLabel')}</Text>
                       <Text style={[styles.paymentSummaryValue, { color: '#10b981' }]}>Rs {selectedSale.amountPaid || 0}</Text>
                     </View>
                     <View style={styles.paymentSummaryRow}>
-                      <Text style={styles.paymentSummaryLabel}>Amount Pending:</Text>
+                      <Text style={styles.paymentSummaryLabel}>{t('sales.amountPendingLabel')}</Text>
                       <Text style={[styles.paymentSummaryValue, { color: '#ef4444', fontWeight: 'bold' }]}>Rs {selectedSale.amountPending || selectedSale.totalAmount}</Text>
                     </View>
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Payment Amount (Rs) *</Text>
+                    <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.paymentAmount')}</Text>
                     <TextInput
                       style={styles.formInput}
                       value={paymentData.amount}
@@ -598,24 +600,24 @@ const MilkSales = () => {
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Payment Method *</Text>
+                    <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.paymentMethod')}</Text>
                     <View style={styles.pickerContainer}>
                       <Picker
                         selectedValue={paymentData.paymentMethod}
                         onValueChange={(value) => setPaymentData({ ...paymentData, paymentMethod: value })}
                         style={styles.picker}
                       >
-                        <Picker.Item label="Cash" value="cash" />
-                        <Picker.Item label="Bank Transfer" value="bank_transfer" />
-                        <Picker.Item label="Cheque" value="cheque" />
-                        <Picker.Item label="Other" value="other" />
+                        <Picker.Item label={t('sales.paymentMethods.cash')} value="cash" />
+                        <Picker.Item label={t('sales.paymentMethods.bank_transfer')} value="bank_transfer" />
+                        <Picker.Item label={t('sales.paymentMethods.cheque')} value="cheque" />
+                        <Picker.Item label={t('sales.paymentMethods.other')} value="other" />
                       </Picker>
                     </View>
                   </View>
 
                   <View style={styles.formGroup}>
                     <DatePickerInput
-                      label="Payment Date"
+                      label={t('sales.paymentDate')}
                       value={paymentData.date}
                       onChange={(date) => setPaymentData({ ...paymentData, date })}
                       themeColor="#10b981"
@@ -624,12 +626,12 @@ const MilkSales = () => {
                   </View>
 
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Notes</Text>
+                    <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('common.notes')}</Text>
                     <TextInput
                       style={[styles.formInput, styles.textArea]}
                       value={paymentData.notes}
                       onChangeText={(text) => setPaymentData({ ...paymentData, notes: text })}
-                      placeholder="Optional notes..."
+                      placeholder={t('common.optional')}
                       placeholderTextColor="#94a3b8"
                       multiline
                       numberOfLines={3}
@@ -641,14 +643,14 @@ const MilkSales = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowPaymentModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleAddPayment}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? 'Adding...' : 'Add Payment'}</Text>
+                <Text style={styles.submitButtonText}>{isSubmitting ? t('common.adding') : t('sales.addPayment')}</Text>
               </TouchableOpacity>
             </View>
           </View>

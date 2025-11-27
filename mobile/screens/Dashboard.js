@@ -215,7 +215,7 @@ const Dashboard = ({ navigation }) => {
             <View style={[styles.sectionIcon, { backgroundColor: '#fef3c7' }]}>
               <Ionicons name="wallet" size={18} color="#d97706" />
             </View>
-            <Text style={styles.sectionTitle}>Monthly Expenses</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.monthlyExpenses')}</Text>
             <Text style={styles.sectionTotal}>Rs {Number(expenses.monthTotal || 0).toLocaleString()}</Text>
           </View>
           {Object.keys(expenses.byCategory).map((category, index) => (
@@ -241,7 +241,7 @@ const Dashboard = ({ navigation }) => {
             <View style={[styles.sectionIcon, { backgroundColor: '#dcfce7' }]}>
               <Ionicons name="people" size={18} color="#16a34a" />
             </View>
-            <Text style={styles.sectionTitle}>Sales by Customer</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.salesByCustomer')}</Text>
           </View>
           {Object.entries(sales.salesByCustomer).map(([customer, customerData], index) => {
             const getSaleTypeIcon = (type) => {
@@ -263,9 +263,9 @@ const Dashboard = ({ navigation }) => {
                     />
                   </View>
                   <View style={styles.customerDetails}>
-                    <Text style={styles.salesType}>{customer || 'Unknown Customer'}</Text>
+                    <Text style={styles.salesType}>{customer || t('sales.unknownCustomer')}</Text>
                     <Text style={styles.salesQty}>
-                      {Number(customerData.quantity || 0).toFixed(1)}L • {customerData.count || 0} {customerData.count === 1 ? 'sale' : 'sales'}
+                      {Number(customerData.quantity || 0).toFixed(1)}L • {customerData.count || 0} {customerData.count === 1 ? t('sales.sale') : t('sales.sales')}
                     </Text>
                   </View>
                 </View>
@@ -287,7 +287,7 @@ const Dashboard = ({ navigation }) => {
             <View style={[styles.sectionIcon, { backgroundColor: '#dcfce7' }]}>
               <Ionicons name="cart" size={18} color="#16a34a" />
             </View>
-            <Text style={styles.sectionTitle}>Sales Distribution</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.salesDistribution')}</Text>
           </View>
           {Object.keys(sales.salesByType).map((type, index) => (
             <View key={index} style={styles.salesRow}>
@@ -301,9 +301,9 @@ const Dashboard = ({ navigation }) => {
                 </View>
                 <View>
                   <Text style={styles.salesType}>
-                    {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                    {type === 'bandhi' ? t('sales.bandhi') : type === 'mandi' ? t('sales.mandi') : t('sales.doorToDoor')}
                   </Text>
-                  <Text style={styles.salesQty}>{sales.salesByType[type].quantity || 0} Liters</Text>
+                  <Text style={styles.salesQty}>{sales.salesByType[type].quantity || 0} {t('sales.liters')}</Text>
                 </View>
               </View>
               <View style={styles.salesRight}>
