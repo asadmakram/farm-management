@@ -52,9 +52,35 @@ const milkSaleSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  amountPaid: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  amountPending: {
+    type: Number,
+    min: 0
+  },
+  payments: [{
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'bank_transfer', 'cheque', 'other'],
+      default: 'cash'
+    },
+    notes: String
+  }],
   paymentStatus: {
     type: String,
-    enum: ['pending', 'received', 'returned'],
+    enum: ['pending', 'partial', 'received', 'returned'],
     default: 'pending'
   },
   notes: {
@@ -76,6 +102,25 @@ milkSaleSchema.pre('validate', function(next) {
     this.totalAmount = qty * (rate + packaging);
   } else {
     this.totalAmount = qty * rate;
+  }
+
+  next();
+});
+
+// Calculate payment status and pending amount before saving
+milkSaleSchema.pre('save', function(next) {
+  // Calculate total paid from payments array
+  const totalPaid = this.payments.reduce((sum, payment) => sum + payment.amount, 0);
+  this.amountPaid = totalPaid;
+  this.amountPending = Math.max(0, this.totalAmount - totalPaid);
+
+  // Update payment status based on amounts
+  if (totalPaid === 0) {
+    this.paymentStatus = 'pending';
+  } else if (totalPaid >= this.totalAmount) {
+    this.paymentStatus = 'received';
+  } else {
+    this.paymentStatus = 'partial';
   }
 
   next();
