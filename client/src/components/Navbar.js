@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { 
   FaHome, FaTint, FaMoneyBillWave, FaSyringe, 
   FaBaby, FaChartBar, FaBars, FaTimes, FaSignOutAlt,
-  FaFileContract, FaRedoAlt, FaCoins, FaCog
+  FaFileContract, FaRedoAlt, FaCoins, FaCog, FaGlobe
 } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -14,6 +15,7 @@ import './Navbar.css';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,6 +27,10 @@ const Navbar = () => {
       fetchCurrencies();
     }
   }, [isAuthenticated]);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
 
   const fetchCurrencies = async () => {
     try {
@@ -92,6 +98,30 @@ const Navbar = () => {
         </button>
 
         <div className={`collapse navbar-collapse d-flex justify-content-start ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
+          {/* Language Selector */}
+          <div className="d-flex align-items-center me-3">
+            <div className="dropdown">
+              <button 
+                className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
+                type="button"
+                id="languageDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <FaGlobe className="me-2" />
+                {i18n.language === 'ur' ? 'اردو' : 'English'}
+              </button>
+              <ul className="dropdown-menu" aria-labelledby="languageDropdown">
+                <li>
+                  <button className="dropdown-item" onClick={() => changeLanguage('en')}>English</button>
+                </li>
+                <li>
+                  <button className="dropdown-item" onClick={() => changeLanguage('ur')}>اردو</button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
           {/* Currency Selector */}
           <div className="d-flex align-items-center me-3">
             <div className="dropdown">

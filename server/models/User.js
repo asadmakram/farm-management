@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema({
     default: 'INR',
     uppercase: true
   },
+  preferredLanguage: {
+    type: String,
+    default: 'en',
+    lowercase: true
+  },
   country: {
     type: String,
     trim: true

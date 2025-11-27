@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions, TouchableOpacity, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,6 +11,7 @@ const cardWidth = (width - 48) / 2;
 
 const Dashboard = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +42,7 @@ const Dashboard = ({ navigation }) => {
       <View style={styles.center}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </View>
     );
@@ -51,11 +53,11 @@ const Dashboard = ({ navigation }) => {
       <View style={styles.center}>
         <View style={styles.emptyContainer}>
           <Ionicons name="cloud-offline-outline" size={64} color="#94a3b8" />
-          <Text style={styles.emptyTitle}>No Data Available</Text>
-          <Text style={styles.emptySubtitle}>Pull down to refresh</Text>
+          <Text style={styles.emptyTitle}>{t('common.noData')}</Text>
+          <Text style={styles.emptySubtitle}>{t('common.pullToRefresh')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchDashboardData}>
             <Ionicons name="refresh" size={18} color="white" />
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('common.tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -66,15 +68,15 @@ const Dashboard = ({ navigation }) => {
 
   const stats = [
     {
-      title: 'Total Animals',
+      title: t('dashboard.totalAnimals'),
       value: animals.total || 0,
       icon: 'paw',
-      details: `${animals.male || 0} Male • ${animals.female || 0} Female`,
+      details: `${animals.male || 0} ${t('dashboard.male')} • ${animals.female || 0} ${t('dashboard.female')}`,
       gradient: ['#f97316', '#ea580c'],
       iconBg: 'rgba(255,255,255,0.2)',
     },
     {
-      title: "Today's Milk",
+      title: t('dashboard.todayMilk'),
       value: `${Number(milk.todayYield || 0).toFixed(1)}L`,
       icon: 'water',
       details: `${Number(milk.yieldTrend || 0) >= 0 ? '↑' : '↓'} ${Number(Math.abs(milk.yieldTrend || 0)).toFixed(1)}% from yesterday`,
@@ -82,7 +84,7 @@ const Dashboard = ({ navigation }) => {
       iconBg: 'rgba(255,255,255,0.2)',
     },
     {
-      title: 'Month Revenue',
+      title: t('dashboard.monthRevenue'),
       value: `Rs ${Number(sales.monthRevenue || 0).toLocaleString()}`,
       icon: 'trending-up',
       details: `${Number(sales.revenueTrend || 0) >= 0 ? '↑' : '↓'} ${Number(Math.abs(sales.revenueTrend || 0)).toFixed(1)}% vs last month`,
@@ -90,7 +92,7 @@ const Dashboard = ({ navigation }) => {
       iconBg: 'rgba(255,255,255,0.2)',
     },
     {
-      title: profitLoss.status === 'profit' ? 'Monthly Profit' : 'Monthly Loss',
+      title: profitLoss.status === 'profit' ? t('dashboard.monthlyProfit') : t('dashboard.monthlyLoss'),
       value: `Rs ${Number(profitLoss.monthProfit || 0).toLocaleString()}`,
       icon: profitLoss.status === 'profit' ? 'arrow-up-circle' : 'arrow-down-circle',
       details: `${profitLoss.profitMargin || 0}% profit margin`,
@@ -141,8 +143,8 @@ const Dashboard = ({ navigation }) => {
       >
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.headerGreeting}>Welcome back! 👋</Text>
-            <Text style={styles.headerTitle}>Farm Dashboard</Text>
+            <Text style={styles.headerGreeting}>{t('common.welcome')} 👋</Text>
+            <Text style={styles.headerTitle}>{t('dashboard.title')}</Text>
           </View>
           <TouchableOpacity style={styles.notificationBtn}>
             <Ionicons name="notifications-outline" size={24} color="white" />
@@ -158,17 +160,17 @@ const Dashboard = ({ navigation }) => {
         <View style={styles.todaySummary}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{animals.total || 0}</Text>
-            <Text style={styles.summaryLabel}>Animals</Text>
+            <Text style={styles.summaryLabel}>{t('dashboard.animals')}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>{Number(milk.todayYield || 0).toFixed(0)}L</Text>
-            <Text style={styles.summaryLabel}>Today's Milk</Text>
+            <Text style={styles.summaryLabel}>{t('dashboard.todayMilk')}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>Rs {Number(profitLoss.monthProfit || 0).toFixed(0)}</Text>
-            <Text style={styles.summaryLabel}>Profit</Text>
+            <Text style={styles.summaryLabel}>{t('dashboard.profit')}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -185,7 +187,7 @@ const Dashboard = ({ navigation }) => {
             <View style={[styles.sectionIcon, { backgroundColor: '#dbeafe' }]}>
               <Ionicons name="bar-chart" size={18} color="#2563eb" />
             </View>
-            <Text style={styles.sectionTitle}>Weekly Milk Production</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.weeklyMilk')}</Text>
           </View>
           <View style={styles.trendContainer}>
             {milk.weeklyTrend.slice(-7).map((item, index) => {
@@ -372,7 +374,7 @@ const Dashboard = ({ navigation }) => {
 
       {/* Quick Actions */}
       <View style={styles.quickActionsSection}>
-        <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+        <Text style={styles.quickActionsTitle}>{t('dashboard.quickActions')}</Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={styles.actionButton} 
@@ -384,7 +386,7 @@ const Dashboard = ({ navigation }) => {
               style={styles.actionGradient}
             >
               <Ionicons name="paw" size={24} color="white" />
-              <Text style={styles.actionButtonText}>Animals</Text>
+              <Text style={styles.actionButtonText}>{t('dashboard.animals')}</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -397,7 +399,7 @@ const Dashboard = ({ navigation }) => {
               style={styles.actionGradient}
             >
               <Ionicons name="water" size={24} color="white" />
-              <Text style={styles.actionButtonText}>Milk</Text>
+              <Text style={styles.actionButtonText}>{t('dashboard.milk')}</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -410,7 +412,7 @@ const Dashboard = ({ navigation }) => {
               style={styles.actionGradient}
             >
               <Ionicons name="cash" size={24} color="white" />
-              <Text style={styles.actionButtonText}>Sales</Text>
+              <Text style={styles.actionButtonText}>{t('dashboard.sales')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../utils/api';
+import i18n from '../i18n';
 
 const AuthContext = createContext();
 
@@ -23,7 +24,14 @@ export const AuthProvider = ({ children }) => {
         const storedUser = await AsyncStorage.getItem('user');
 
         if (token && storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          
+          // Set language from user preference
+          if (parsedUser.preferredLanguage) {
+            await AsyncStorage.setItem('userLanguage', parsedUser.preferredLanguage);
+            i18n.changeLanguage(parsedUser.preferredLanguage);
+          }
         }
       } catch (err) {
         // swallow and continue so UI doesn't hang
@@ -46,6 +54,12 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       
+      // Set language from user preference
+      if (user.preferredLanguage) {
+        await AsyncStorage.setItem('userLanguage', user.preferredLanguage);
+        i18n.changeLanguage(user.preferredLanguage);
+      }
+      
       return { success: true };
     } catch (error) {
       return { 
@@ -63,6 +77,12 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
+      
+      // Set language from user preference
+      if (user.preferredLanguage) {
+        await AsyncStorage.setItem('userLanguage', user.preferredLanguage);
+        i18n.changeLanguage(user.preferredLanguage);
+      }
       
       return { success: true };
     } catch (error) {

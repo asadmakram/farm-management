@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import DatePickerInput from '../components/DatePickerInput';
 
@@ -10,6 +11,7 @@ const { width } = Dimensions.get('window');
 
 const Animals = () => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +253,7 @@ const Animals = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Loading animals...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -272,8 +274,8 @@ const Animals = () => {
       >
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.headerSubtitle}>Animal Management</Text>
-            <Text style={styles.headerTitle}>Your Herd</Text>
+            <Text style={styles.headerSubtitle}>{t('animals.subtitle')}</Text>
+            <Text style={styles.headerTitle}>{t('animals.title')}</Text>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
             <Ionicons name="add" size={26} color="#f97316" />
@@ -283,22 +285,22 @@ const Animals = () => {
         <View style={styles.statsRowHeader}>
           <View style={styles.headerStatItem}>
             <Text style={styles.headerStatValue}>{animals.length}</Text>
-            <Text style={styles.headerStatLabel}>Total</Text>
+            <Text style={styles.headerStatLabel}>{t('common.total')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.headerStatItem}>
             <Text style={styles.headerStatValue}>{activeAnimals}</Text>
-            <Text style={styles.headerStatLabel}>Active</Text>
+            <Text style={styles.headerStatLabel}>{t('animals.active')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.headerStatItem}>
             <Text style={styles.headerStatValue}>{femaleAnimals}</Text>
-            <Text style={styles.headerStatLabel}>Female</Text>
+            <Text style={styles.headerStatLabel}>{t('animals.female')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.headerStatItem}>
             <Text style={styles.headerStatValue}>{maleAnimals}</Text>
-            <Text style={styles.headerStatLabel}>Male</Text>
+            <Text style={styles.headerStatLabel}>{t('animals.male')}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -323,8 +325,8 @@ const Animals = () => {
           <View style={styles.emptyIconContainer}>
             <Ionicons name="paw-outline" size={48} color="#f97316" />
           </View>
-          <Text style={styles.emptyStateTitle}>No Animals Yet</Text>
-          <Text style={styles.emptyStateText}>Start building your herd today</Text>
+          <Text style={styles.emptyStateTitle}>{t('animals.noAnimals')}</Text>
+          <Text style={styles.emptyStateText}>{t('animals.startHerd')}</Text>
           <TouchableOpacity style={styles.emptyStateButton} onPress={() => openModal()} activeOpacity={0.8}>
             <LinearGradient
               colors={['#f97316', '#ea580c']}
@@ -333,7 +335,7 @@ const Animals = () => {
               style={styles.emptyButtonGradient}
             >
               <Ionicons name="add" size={20} color="white" />
-              <Text style={styles.emptyStateButtonText}>Add First Animal</Text>
+              <Text style={styles.emptyStateButtonText}>{t('animals.addFirst')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -344,7 +346,7 @@ const Animals = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingAnimal ? 'Edit Animal' : 'Add New Animal'}</Text>
+              <Text style={styles.modalTitle}>{editingAnimal ? t('animals.editAnimal') : t('animals.addAnimal')}</Text>
               <TouchableOpacity onPress={closeModal}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -353,12 +355,12 @@ const Animals = () => {
             <ScrollView style={styles.modalBody}>
               <View style={styles.formRow}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Tag Number *</Text>
+                  <Text style={styles.formLabel}>{t('animals.tagNumber')} *</Text>
                   <TextInput
                     style={styles.formInput}
                     value={formData.tagNumber}
                     onChangeText={(text) => setFormData({ ...formData, tagNumber: text })}
-                    placeholder="Enter tag number"
+                    placeholder={t('animals.tagNumber')}
                     placeholderTextColor="#94a3b8"
                   />
                 </View>

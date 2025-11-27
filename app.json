@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "bf52d537-9f66-4b0d-a442-4d8ae8929695"
+      }
+    },
+    "android": {
+      "package": "com.asadmakram.dairyfarmmanagement"
+    }
+  }
+}

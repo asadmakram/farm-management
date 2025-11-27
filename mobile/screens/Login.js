@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 const Login = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -56,25 +58,33 @@ const Login = ({ navigation }) => {
     setLoading(false);
   };
 
+  const toggleLanguage = () => {
+    const nextLanguage = i18n.language === 'en' ? 'ur' : 'en';
+    i18n.changeLanguage(nextLanguage);
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerSection}>
+          <TouchableOpacity onPress={toggleLanguage} style={styles.langButton}>
+            <Text style={styles.langButtonText}>{i18n.language === 'en' ? 'اردو' : 'English'}</Text>
+          </TouchableOpacity>
           <View style={styles.logoContainer}>
             <Text style={styles.logo}>🐄</Text>
           </View>
-          <Text style={styles.mainTitle}>Dairy Farm Manager</Text>
-          <Text style={styles.subtitle}>Professional Farm Management</Text>
+          <Text style={styles.mainTitle}>{t('login.title')}</Text>
+          <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
         </View>
 
         <View style={styles.formContainer}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>{t('login.email')}</Text>
             <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
               <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={t('login.email')}
                 placeholderTextColor="#94a3b8"
                 value={formData.email}
                 onChangeText={(value) => handleChange('email', value)}
@@ -87,12 +97,12 @@ const Login = ({ navigation }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('login.password')}</Text>
             <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
               <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder={t('login.password')}
                 placeholderTextColor="#94a3b8"
                 value={formData.password}
                 onChangeText={(value) => handleChange('password', value)}
@@ -122,14 +132,14 @@ const Login = ({ navigation }) => {
             ) : (
               <>
                 <Ionicons name="log-in-outline" size={20} color="white" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>{t('login.submit')}</Text>
               </>
             )}
           </TouchableOpacity>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>{t('login.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -138,14 +148,14 @@ const Login = ({ navigation }) => {
             disabled={loading}
           >
             <View style={styles.registerContainer}>
-              <Text style={styles.registerText}>Don't have an account? </Text>
-              <Text style={styles.registerLink}>Sign Up</Text>
+              <Text style={styles.registerText}>{t('login.noAccount')} </Text>
+              <Text style={styles.registerLink}>{t('login.register')}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2024 Dairy Farm Manager</Text>
+          <Text style={styles.footerText}>{t('login.footer')}</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -300,6 +310,16 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#999',
     fontSize: 12,
+  },
+  langButton: {
+    position: 'absolute',
+    top: -20,
+    right: 0,
+    padding: 8,
+  },
+  langButtonText: {
+    color: '#007bff',
+    fontWeight: '600',
   },
 });
 

@@ -127,7 +127,8 @@ router.post(
           name: user.name,
           email: user.email,
           farmName: user.farmName,
-          preferredCurrency: user.preferredCurrency
+          preferredCurrency: user.preferredCurrency,
+          preferredLanguage: user.preferredLanguage
         }
       });
     } catch (error) {
@@ -155,6 +156,7 @@ router.get('/me', auth, async (req, res) => {
         phoneNumber: req.user.phoneNumber,
         address: req.user.address,
         preferredCurrency: req.user.preferredCurrency,
+        preferredLanguage: req.user.preferredLanguage,
         country: req.user.country,
         city: req.user.city,
         subscription: req.user.subscription
@@ -268,15 +270,65 @@ router.put('/preferred-currency', auth, async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/language
+// @desc    Update user's preferred language
+// @access  Private
+router.put('/language', auth, async (req, res) => {
+  try {
+    const { preferredLanguage } = req.body;
+
+    if (!preferredLanguage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Preferred language is required'
+      });
+    }
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferredLanguage: preferredLanguage.toLowerCase() },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Language preference updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        farmName: user.farmName,
+        preferredCurrency: user.preferredCurrency,
+        preferredLanguage: user.preferredLanguage
+      }
+    });
+  } catch (error) {
+    console.error('Update language error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   PUT /api/auth/settings
 // @desc    Update user settings
 // @access  Private
 router.put('/settings', auth, async (req, res) => {
   try {
-    const { preferredCurrency, country, city } = req.body;
+    const { preferredCurrency, preferredLanguage, country, city } = req.body;
 
     const updateData = {};
     if (preferredCurrency !== undefined) updateData.preferredCurrency = preferredCurrency;
+    if (preferredLanguage !== undefined) updateData.preferredLanguage = preferredLanguage.toLowerCase();
     if (country !== undefined) updateData.country = country;
     if (city !== undefined) updateData.city = city;
 
@@ -305,6 +357,7 @@ router.put('/settings', auth, async (req, res) => {
         phoneNumber: user.phoneNumber,
         address: user.address,
         preferredCurrency: user.preferredCurrency,
+        preferredLanguage: user.preferredLanguage,
         country: user.country,
         city: user.city,
         subscription: user.subscription

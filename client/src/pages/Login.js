@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 import './Auth.css';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -24,7 +26,7 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
     
     if (result.success) {
-      toast.success('Login successful!');
+      toast.success(t('login.success'));
       navigate('/');
     } else {
       toast.error(result.message);
@@ -37,13 +39,13 @@ const Login = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>🐄 Dairy Farm Manager</h1>
-          <h2>Login to Your Account</h2>
+          <h1>🐄 {t('app.title')}</h1>
+          <h2>{t('login.title')}</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label className="form-label">{t('login.email')}</label>
             <input
               type="email"
               name="email"
@@ -51,12 +53,12 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              placeholder={t('login.email')}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">{t('login.password')}</label>
             <input
               type="password"
               name="password"
@@ -64,7 +66,7 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="Enter your password"
+              placeholder={t('login.password')}
             />
           </div>
 
@@ -73,12 +75,12 @@ const Login = () => {
             className="btn btn-primary btn-block"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
 
         <div className="auth-footer">
-          <p>Don't have an account? <Link to="/register">Register here</Link></p>
+          <p>{t('login.noAccount')} <Link to="/register">{t('login.register')}</Link></p>
         </div>
       </div>
     </div>
