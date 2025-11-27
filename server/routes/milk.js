@@ -269,6 +269,56 @@ router.post(
   }
 );
 
+// @route   POST /api/milk/sales/:id/payments
+// @desc    Add payment to a milk sale
+// @access  Private
+router.post(
+  '/sales/:id/payments',
+  [
+    auth,
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be positive'),
+    body('paymentMethod').optional().isIn(['cash', 'bank_transfer', 'cheque', 'other']).withMessage('Invalid payment method'),
+    body('date').optional().isISO8601().withMessage('Invalid date format'),
+    body('notes').optional().isString()
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const sale = await MilkSale.findOne({ 
+        _id: req.params.id, 
+        userId: req.user._id 
+      });
+
+      if (!sale) {
+        return res.status(404).json({ success: false, message: 'Sale not found' });
+      }
+
+      const payment = {
+        amount: req.body.amount,
+        date: req.body.date || new Date(),
+        paymentMethod: req.body.paymentMethod || 'cash',
+        notes: req.body.notes || ''
+      };
+
+      sale.payments.push(payment);
+      await sale.save(); // This triggers the pre-save hook to update payment status
+
+      res.json({ 
+        success: true, 
+        message: 'Payment added successfully', 
+        data: sale 
+      });
+    } catch (error) {
+      console.error('Add payment error:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
+
 // @route   PUT /api/milk/sales/:id
 // @desc    Update milk sale
 // @access  Private
@@ -322,5 +372,70 @@ router.delete('/sales/:id', auth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
+// @route   POST /api/milk/sales/auto-allocate-payment
+// @desc    Auto-allocate payment to pending sales by customer (FIFO)
+// @access  Private
+router.post(
+  '/sales/auto-allocate-payment',
+  [
+    auth,
+    body('customerName').notEmpty().withMessage('Customer name is required'),
+    body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be positive'),
+    body('paymentMethod').optional().isIn(['cash', 'bank_transfer', 'cheque', 'other']).withMessage('Invalid payment method'),
+    body('date').optional().isISO8601().withMessage('Invalid date format')
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { customerName, amount, paymentMethod, date } = req.body;
+
+      // Find all pending/partial sales for this customer, sorted by date (FIFO)
+      const pendingSales = await MilkSale.find({
+        userId: req.user._id,
+        customerName: { $regex: new RegExp(`^${customerName}$`, 'i') }, // Case insensitive match
+        paymentStatus: { $in: ['pending', 'partial'] }
+      }).sort({ date: 1 });
+
+      if (pendingSales.length === 0) {
+        return res.status(404).json({ success: false, message: 'No pending sales found for this customer' });
+      }
+
+      let remainingAmount = amount;
+      const updatedSales = [];
+
+      for (const sale of pendingSales) {
+        if (remainingAmount <= 0) break;
+
+        const amountToPay = Math.min(remainingAmount, sale.amountPending);
+        
+        sale.payments.push({
+          amount: amountToPay,
+          date: date || new Date(),
+          paymentMethod: paymentMethod || 'cash',
+          notes: 'Auto-allocated from bulk payment'
+        });
+
+        await sale.save();
+        remainingAmount -= amountToPay;
+        updatedSales.push(sale);
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Payment of Rs ${amount} allocated to ${updatedSales.length} sale(s)`,
+        remainingAmount: remainingAmount > 0 ? remainingAmount : 0,
+        data: updatedSales 
+      });
+    } catch (error) {
+      console.error('Auto-allocate payment error:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
 
 module.exports = router;

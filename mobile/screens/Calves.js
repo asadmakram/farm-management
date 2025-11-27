@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, Alert, ActivityIndicator, TouchableOpacity, Modal, TextInput, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../utils/api';
-import FormInput from '../components/FormInput';
-import FormSelect from '../components/FormSelect';
-import FormDatePicker from '../components/FormDatePicker';
-import FormButton from '../components/FormButton';
+import DatePickerInput from '../components/DatePickerInput';
 
-const Calves = () => {
+const Calves = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [calves, setCalves] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCalf, setEditingCalf] = useState(null);
   const [formData, setFormData] = useState({
+    animalId: '',
     motherId: '',
-    name: '',
-    dateOfBirth: new Date().toISOString().split('T')[0],
-    gender: 'male',
-    breed: '',
-    weightAtBirth: '',
+    birthDate: new Date().toISOString().split('T')[0],
+    birthWeight: '',
+    gender: 'female',
     notes: ''
   });
-  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -34,8 +36,7 @@ const Calves = () => {
         api.get('/animals')
       ]);
       setCalves(calvesRes.data.data || []);
-      const femaleAnimals = (animalsRes.data.data || []).filter(a => a.gender === 'female');
-      setAnimals(femaleAnimals);
+      setAnimals(animalsRes.data.data || []);
       setLoading(false);
     } catch (error) {
       Alert.alert('Error', 'Error fetching data');
@@ -43,60 +44,106 @@ const Calves = () => {
     }
   };
 
-  const handleChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
-    }
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
   };
 
-  const validate = () => {
-    const newErrors = {};
-
-    if (!formData.motherId) {
-      newErrors.motherId = 'Mother animal is required';
+  const openModal = (calf = null) => {
+    if (calf) {
+      setEditingCalf(calf);
+      setFormData({
+        animalId: calf.animalId?._id || '',
+        motherId: calf.motherId?._id || '',
+        birthDate: calf.birthDate?.split('T')[0] || new Date().toISOString().split('T')[0],
+        birthWeight: calf.birthWeight?.toString() || '',
+        gender: calf.gender || 'female',
+        notes: calf.notes || ''
+      });
+    } else {
+      setEditingCalf(null);
+      resetForm();
     }
+    setShowModal(true);
+  };
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Calf name is required';
-    }
-
-    if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = 'Date of birth is required';
-    }
-
-    if (formData.weightAtBirth && isNaN(formData.weightAtBirth)) {
-      newErrors.weightAtBirth = 'Weight must be a number';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const resetForm = () => {
+    setFormData({
+      animalId: '',
+      motherId: '',
+      birthDate: new Date().toISOString().split('T')[0],
+      birthWeight: '',
+      gender: 'female',
+      notes: ''
+    });
   };
 
   const handleSubmit = async () => {
-    if (!validate()) {
+    if (!formData.animalId || !formData.motherId) {
+      Alert.alert('Error', 'Please select calf animal and mother');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await api.post('/calves', formData);
-      Alert.alert('Success', 'Calf record added successfully');
-      setFormData({
-        motherId: '',
-        name: '',
-        dateOfBirth: new Date().toISOString().split('T')[0],
-        gender: 'male',
-        breed: '',
-        weightAtBirth: '',
-        notes: ''
-      });
-      setErrors({});
+      const payload = {
+        ...formData,
+        birthWeight: Number(formData.birthWeight || 0)
+      };
+
+      if (editingCalf) {
+        await api.put(`/calves/${editingCalf._id}`, payload);
+        Alert.alert('Success', 'Calf updated successfully');
+      } else {
+        await api.post('/calves', payload);
+        Alert.alert('Success', 'Calf added successfully');
+      }
+      
       fetchData();
+      setShowModal(false);
+      resetForm();
+      setEditingCalf(null);
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error adding calf record');
+      Alert.alert('Error', error.response?.data?.message || 'Error saving calf');
     }
     setIsSubmitting(false);
+  };
+
+  const handleDelete = async (id) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this calf record?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/calves/${id}`);
+              Alert.alert('Success', 'Calf deleted successfully');
+              fetchData();
+            } catch (error) {
+              Alert.alert('Error', 'Error deleting calf');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const getAgeDays = (birthDate) => {
+    return Math.floor((new Date() - new Date(birthDate)) / (1000 * 60 * 60 * 24));
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return '#10b981';
+      case 'sold': return '#f59e0b';
+      case 'deceased': return '#ef4444';
+      default: return '#6b7280';
+    }
   };
 
   const renderCalf = ({ item }) => (
@@ -106,176 +153,220 @@ const Calves = () => {
           <Text style={styles.calfIcon}>{item.gender === 'male' ? '🐂' : '🐄'}</Text>
         </View>
         <View style={styles.calfInfo}>
-          <Text style={styles.calfName}>{item.name}</Text>
-          <Text style={styles.calfDetail}>Mother: {item.motherId?.name || 'Unknown'}</Text>
+          <Text style={styles.calfTag}>{item.animalId?.tagNumber || 'N/A'}</Text>
+          <Text style={styles.calfMother}>Mother: {item.motherId?.tagNumber || 'N/A'}</Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status || 'active'}</Text>
         </View>
       </View>
+
       <View style={styles.calfDetails}>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date of Birth:</Text>
-          <Text style={styles.detailValue}>{new Date(item.dateOfBirth).toLocaleDateString()}</Text>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Gender</Text>
+            <Text style={styles.detailValue}>{item.gender}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Birth Date</Text>
+            <Text style={styles.detailValue}>{new Date(item.birthDate).toLocaleDateString()}</Text>
+          </View>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Gender:</Text>
-          <Text style={styles.detailValue}>{item.gender}</Text>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Birth Weight</Text>
+            <Text style={styles.detailValue}>{item.birthWeight} kg</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Age</Text>
+            <Text style={styles.detailValue}>{getAgeDays(item.birthDate)} days</Text>
+          </View>
         </View>
-        {item.breed && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Breed:</Text>
-            <Text style={styles.detailValue}>{item.breed}</Text>
-          </View>
-        )}
-        {item.weightAtBirth && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Birth Weight:</Text>
-            <Text style={styles.detailValue}>{item.weightAtBirth} kg</Text>
-          </View>
-        )}
+      </View>
+
+      <View style={styles.cardActions}>
+        <TouchableOpacity style={styles.editBtn} onPress={() => openModal(item)}>
+          <Ionicons name="create-outline" size={18} color="#2563eb" />
+          <Text style={styles.editBtnText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item._id)}>
+          <Ionicons name="trash-outline" size={18} color="#ef4444" />
+          <Text style={styles.deleteBtnText}>Delete</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" color="#007bff" />
         <Text style={styles.loadingText}>Loading calves...</Text>
       </View>
     );
   }
 
-  const animalOptions = animals.map(animal => ({
-    label: `${animal.name} (${animal.tagNumber || 'No Tag'})`,
-    value: animal._id
-  }));
-
-  const genderOptions = [
-    { label: 'Male', value: 'male' },
-    { label: 'Female', value: 'female' }
-  ];
+  const femaleAnimals = animals.filter(a => a.gender === 'female');
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.container}
-    >
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>🐄 Calf Management</Text>
-          <Text style={styles.headerSubtitle}>Track and manage new calves</Text>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>🐄 Calves</Text>
+          <Text style={styles.subtitle}>{calves.length} calves recorded</Text>
         </View>
+        <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
+          <Ionicons name="add" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Add New Calf</Text>
-          
-          <FormSelect
-            label="Mother Animal"
-            value={formData.motherId}
-            onValueChange={(value) => handleChange('motherId', value)}
-            options={animalOptions}
-            placeholder="Select mother animal"
-            icon="female-outline"
-            error={errors.motherId}
-            required
-            disabled={isSubmitting}
-          />
-
-          <FormInput
-            label="Calf Name"
-            value={formData.name}
-            onChangeText={(value) => handleChange('name', value)}
-            placeholder="Enter calf name"
-            icon="paw-outline"
-            error={errors.name}
-            required
-            editable={!isSubmitting}
-          />
-
-          <FormDatePicker
-            label="Date of Birth"
-            value={formData.dateOfBirth}
-            onDateChange={(value) => handleChange('dateOfBirth', value)}
-            error={errors.dateOfBirth}
-            required
-            disabled={isSubmitting}
-          />
-
-          <FormSelect
-            label="Gender"
-            value={formData.gender}
-            onValueChange={(value) => handleChange('gender', value)}
-            options={genderOptions}
-            icon="male-female-outline"
-            required
-            disabled={isSubmitting}
-          />
-
-          <FormInput
-            label="Breed"
-            value={formData.breed}
-            onChangeText={(value) => handleChange('breed', value)}
-            placeholder="Enter breed (optional)"
-            icon="ribbon-outline"
-            editable={!isSubmitting}
-          />
-
-          <FormInput
-            label="Weight at Birth (kg)"
-            value={formData.weightAtBirth}
-            onChangeText={(value) => handleChange('weightAtBirth', value)}
-            placeholder="0.0"
-            icon="fitness-outline"
-            keyboardType="decimal-pad"
-            error={errors.weightAtBirth}
-            editable={!isSubmitting}
-          />
-
-          <FormInput
-            label="Notes"
-            value={formData.notes}
-            onChangeText={(value) => handleChange('notes', value)}
-            placeholder="Additional notes (optional)"
-            icon="create-outline"
-            multiline
-            numberOfLines={3}
-            editable={!isSubmitting}
-          />
-
-          <FormButton
-            title="Add Calf Record"
-            onPress={handleSubmit}
-            variant="success"
-            icon="add-circle-outline"
-            loading={isSubmitting}
-            disabled={isSubmitting}
-            fullWidth
-          />
+      {calves.length > 0 ? (
+        <FlatList
+          data={calves}
+          renderItem={renderCalf}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>🐄</Text>
+          <Text style={styles.emptyStateText}>No calves recorded yet</Text>
+          <TouchableOpacity style={styles.emptyStateButton} onPress={() => openModal()}>
+            <Ionicons name="add" size={20} color="white" />
+            <Text style={styles.emptyStateButtonText}>Add First Calf</Text>
+          </TouchableOpacity>
         </View>
+      )}
 
-        <View style={styles.listSection}>
-          <Text style={styles.listTitle}>Recent Calves</Text>
-          {calves.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>🐄</Text>
-              <Text style={styles.emptyStateText}>No calf records yet</Text>
-              <Text style={styles.emptyStateSubtext}>Add your first calf above</Text>
+      {/* Add/Edit Modal */}
+      <Modal visible={showModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingCalf ? 'Edit Calf' : 'Add New Calf'}</Text>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={calves.slice(0, 10)}
-              renderItem={renderCalf}
-              keyExtractor={(item) => item._id}
-              scrollEnabled={false}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Calf Animal *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={formData.animalId}
+                    onValueChange={(value) => setFormData({ ...formData, animalId: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Animal" value="" />
+                    {animals.map(animal => (
+                      <Picker.Item 
+                        key={animal._id} 
+                        label={`${animal.tagNumber} - ${animal.name || animal.breed}`} 
+                        value={animal._id} 
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Mother *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={formData.motherId}
+                    onValueChange={(value) => setFormData({ ...formData, motherId: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select Mother" value="" />
+                    {femaleAnimals.map(animal => (
+                      <Picker.Item 
+                        key={animal._id} 
+                        label={`${animal.tagNumber} - ${animal.name || animal.breed}`} 
+                        value={animal._id} 
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={styles.formGroupHalf}>
+                  <DatePickerInput
+                    label="Birth Date"
+                    value={formData.birthDate}
+                    onChange={(date) => setFormData({ ...formData, birthDate: date })}
+                    themeColor="#ec4899"
+                    required
+                  />
+                </View>
+                <View style={styles.formGroupHalf}>
+                  <Text style={styles.formLabel}>Birth Weight (kg)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={formData.birthWeight}
+                    onChangeText={(text) => setFormData({ ...formData, birthWeight: text })}
+                    placeholder="0.00"
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Gender *</Text>
+                <View style={styles.genderSelector}>
+                  <TouchableOpacity
+                    style={[styles.genderOption, formData.gender === 'female' && styles.genderOptionActive]}
+                    onPress={() => setFormData({ ...formData, gender: 'female' })}
+                  >
+                    <Text style={[styles.genderText, formData.gender === 'female' && styles.genderTextActive]}>🐄 Female</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.genderOption, formData.gender === 'male' && styles.genderOptionActive]}
+                    onPress={() => setFormData({ ...formData, gender: 'male' })}
+                  >
+                    <Text style={[styles.genderText, formData.gender === 'male' && styles.genderTextActive]}>🐂 Male</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Notes</Text>
+                <TextInput
+                  style={[styles.formInput, styles.textArea]}
+                  value={formData.notes}
+                  onChangeText={(text) => setFormData({ ...formData, notes: text })}
+                  placeholder="Optional notes..."
+                  placeholderTextColor="#94a3b8"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Saving...' : (editingCalf ? 'Update' : 'Add')} Calf
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 };
 
@@ -284,14 +375,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  scrollView: {
-    flex: 1,
-  },
-  centerContainer: {
+  center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 12,
@@ -299,61 +386,56 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
-    backgroundColor: 'white',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#ec4899',
+    borderBottomWidth: 0,
   },
-  headerTitle: {
-    fontSize: 24,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  title: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    color: 'white',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+  subtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
-  formCard: {
+  addButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContent: {
+    padding: 16,
+  },
+  calfCard: {
     backgroundColor: 'white',
-    margin: 16,
-    padding: 20,
     borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 20,
-  },
-  listSection: {
-    margin: 16,
-    marginTop: 0,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 12,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  calfCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   calfHeader: {
     flexDirection: 'row',
@@ -367,7 +449,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#e8f4f8',
+    backgroundColor: '#fef3c7',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -378,52 +460,235 @@ const styles = StyleSheet.create({
   calfInfo: {
     flex: 1,
   },
-  calfName: {
-    fontSize: 16,
+  calfTag: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 2,
   },
-  calfDetail: {
+  calfMother: {
     fontSize: 14,
     color: '#666',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
   calfDetails: {
-    gap: 8,
+    marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailItem: {
+    flex: 1,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
+    marginBottom: 2,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1a1a1a',
+    textTransform: 'capitalize',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 12,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#dbeafe',
+    borderRadius: 8,
+  },
+  editBtnText: {
+    color: '#2563eb',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+  },
+  deleteBtnText: {
+    color: '#ef4444',
+    fontWeight: '600',
+    marginLeft: 6,
   },
   emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-    backgroundColor: 'white',
-    borderRadius: 12,
   },
   emptyStateIcon: {
     fontSize: 64,
     marginBottom: 16,
   },
   emptyStateText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyStateButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  formGroupHalf: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#f8f9fa',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  genderSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderOption: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  genderOptionActive: {
+    backgroundColor: '#d1fae5',
+    borderColor: '#10b981',
+  },
+  genderText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  genderTextActive: {
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
-    marginBottom: 4,
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
+  submitButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });
 

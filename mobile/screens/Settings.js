@@ -1,44 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, TextInput, Dimensions } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import FormSelect from '../components/FormSelect';
-import FormButton from '../components/FormButton';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../utils/api';
 
-const CURRENCIES = [
-  { label: '🇮🇳 Indian Rupee (INR)', value: 'INR', symbol: '₹' },
-  { label: '🇺🇸 US Dollar (USD)', value: 'USD', symbol: '$' },
-  { label: '🇪🇺 Euro (EUR)', value: 'EUR', symbol: '€' },
-  { label: '🇬🇧 British Pound (GBP)', value: 'GBP', symbol: '£' },
-  { label: '🇵🇰 Pakistani Rupee (PKR)', value: 'PKR', symbol: '₨' },
-  { label: '🇦🇺 Australian Dollar (AUD)', value: 'AUD', symbol: 'A$' },
-  { label: '🇨🇦 Canadian Dollar (CAD)', value: 'CAD', symbol: 'C$' },
-  { label: '🇨🇭 Swiss Franc (CHF)', value: 'CHF', symbol: 'Fr' },
-  { label: '🇨🇳 Chinese Yuan (CNY)', value: 'CNY', symbol: '¥' },
-  { label: '🇯🇵 Japanese Yen (JPY)', value: 'JPY', symbol: '¥' },
-  { label: '🇦🇪 UAE Dirham (AED)', value: 'AED', symbol: 'د.إ' },
-  { label: '🇸🇦 Saudi Riyal (SAR)', value: 'SAR', symbol: '﷼' },
-  { label: '🇿🇦 South African Rand (ZAR)', value: 'ZAR', symbol: 'R' },
-  { label: '🇧🇩 Bangladeshi Taka (BDT)', value: 'BDT', symbol: '৳' },
-  { label: '🇱🇰 Sri Lankan Rupee (LKR)', value: 'LKR', symbol: 'Rs' },
-];
+const { width } = Dimensions.get('window');
 
-const Settings = () => {
-  const { logout, user } = useAuth();
-  const [currency, setCurrency] = useState(user?.preferredCurrency || 'INR');
-  const [loading, setLoading] = useState(false);
+const Settings = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { logout, user, setUser } = useAuth();
+  const [formData, setFormData] = useState({
+    country: user?.country || '',
+    city: user?.city || ''
+  });
   const [saving, setSaving] = useState(false);
 
-  const selectedCurrency = CURRENCIES.find(c => c.value === currency);
-
-  const handleSaveCurrency = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/auth/update-currency', { preferredCurrency: currency });
-      Alert.alert('Success', 'Currency preference updated successfully');
+      const response = await api.put('/auth/settings', formData);
+      if (setUser && response.data.user) {
+        setUser(response.data.user);
+      }
+      Alert.alert('Success', 'Settings updated successfully');
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update currency');
+      Alert.alert('Error', error.response?.data?.message || 'Failed to update settings');
     }
     setSaving(false);
   };
@@ -49,111 +37,204 @@ const Settings = () => {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', onPress: logout },
+        { text: 'Logout', style: 'destructive', onPress: logout },
       ]
     );
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <Ionicons name="settings-outline" size={48} color="#007bff" />
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Manage your account preferences</Text>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="person-outline" size={24} color="#007bff" />
-          <Text style={styles.sectionTitle}>Account Information</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Name</Text>
-          <Text style={styles.infoValue}>{user?.name}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{user?.email}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Farm Name</Text>
-          <Text style={styles.infoValue}>{user?.farmName}</Text>
-        </View>
-        {user?.phoneNumber && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={styles.infoValue}>{user.phoneNumber}</Text>
+      {/* Profile Header */}
+      <LinearGradient
+        colors={['#3b82f6', '#1d4ed8']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}
+      >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </Text>
           </View>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="cash-outline" size={24} color="#007bff" />
-          <Text style={styles.sectionTitle}>Currency Preference</Text>
+          <View style={styles.onlineIndicator} />
         </View>
-        <Text style={styles.sectionDescription}>
-          Select your preferred currency. All amounts will be displayed in this currency.
-        </Text>
-        
-        <View style={styles.currencyPreview}>
-          <Text style={styles.currencyLabel}>Current Currency</Text>
-          <View style={styles.currencyDisplay}>
-            <Text style={styles.currencySymbol}>{selectedCurrency?.symbol}</Text>
-            <Text style={styles.currencyCode}>{currency}</Text>
+        <Text style={styles.userName}>{user?.name || 'User'}</Text>
+        <Text style={styles.userEmail}>{user?.email || ''}</Text>
+        <View style={styles.farmBadge}>
+          <Ionicons name="business-outline" size={14} color="#fff" />
+          <Text style={styles.farmName}>{user?.farmName || 'My Farm'}</Text>
+        </View>
+      </LinearGradient>
+
+      {/* Quick Stats */}
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: '#dbeafe' }]}>
+            <Ionicons name="calendar-outline" size={20} color="#2563eb" />
           </View>
-        </View>
-
-        <FormSelect
-          label="Select Currency"
-          value={currency}
-          onValueChange={setCurrency}
-          options={CURRENCIES}
-          placeholder="Choose currency"
-          icon="cash-outline"
-          required
-        />
-
-        <FormButton
-          title="Save Currency Preference"
-          onPress={handleSaveCurrency}
-          variant="primary"
-          icon="checkmark-circle-outline"
-          loading={saving}
-          disabled={saving || currency === user?.preferredCurrency}
-          fullWidth
-          style={styles.saveButton}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="information-circle-outline" size={24} color="#007bff" />
-          <Text style={styles.sectionTitle}>About</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>App Version</Text>
-          <Text style={styles.infoValue}>1.0.0</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Account Created</Text>
-          <Text style={styles.infoValue}>
-            {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+          <Text style={styles.statValue}>
+            {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
           </Text>
+          <Text style={styles.statLabel}>Member Since</Text>
+        </View>
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: '#dcfce7' }]}>
+            <Ionicons name="checkmark-circle-outline" size={20} color="#16a34a" />
+          </View>
+          <Text style={styles.statValue}>Active</Text>
+          <Text style={styles.statLabel}>Status</Text>
+        </View>
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: '#fef3c7' }]}>
+            <Ionicons name="shield-checkmark-outline" size={20} color="#d97706" />
+          </View>
+          <Text style={styles.statValue}>Pro</Text>
+          <Text style={styles.statLabel}>Plan</Text>
         </View>
       </View>
 
-      <FormButton
-        title="Logout"
-        onPress={handleLogout}
-        variant="danger"
-        icon="log-out-outline"
-        fullWidth
-        style={styles.logoutButton}
-      />
+      {/* Location Settings */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionIconContainer}>
+            <Ionicons name="location-outline" size={20} color="#2563eb" />
+          </View>
+          <Text style={styles.sectionTitle}>Location</Text>
+        </View>
+        
+        <View style={styles.inputContainer}>
+          <View style={styles.inputIcon}>
+            <Ionicons name="flag-outline" size={18} color="#94a3b8" />
+          </View>
+          <TextInput
+            style={styles.modernInput}
+            value={formData.country}
+            onChangeText={(text) => setFormData({ ...formData, country: text })}
+            placeholder="Country"
+            placeholderTextColor="#94a3b8"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <View style={styles.inputIcon}>
+            <Ionicons name="business-outline" size={18} color="#94a3b8" />
+          </View>
+          <TextInput
+            style={styles.modernInput}
+            value={formData.city}
+            onChangeText={(text) => setFormData({ ...formData, city: text })}
+            placeholder="City"
+            placeholderTextColor="#94a3b8"
+          />
+        </View>
+      </View>
+
+      {/* Currency Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionIconContainer, { backgroundColor: '#dcfce7' }]}>
+            <Ionicons name="cash-outline" size={20} color="#16a34a" />
+          </View>
+          <Text style={styles.sectionTitle}>Currency</Text>
+        </View>
+        
+        <View style={styles.currencyDisplay}>
+          <View style={styles.currencyBadge}>
+            <Text style={styles.currencySymbol}>Rs</Text>
+          </View>
+          <View style={styles.currencyInfo}>
+            <Text style={styles.currencyName}>Pakistani Rupee</Text>
+            <Text style={styles.currencyCode}>PKR</Text>
+          </View>
+          <View style={styles.currencyActive}>
+            <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
+          </View>
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={saving}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={saving ? ['#94a3b8', '#94a3b8'] : ['#3b82f6', '#2563eb']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.saveButtonGradient}
+          >
+            {saving ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="white" />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      {/* Menu Items */}
+      <View style={styles.menuSection}>
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <View style={[styles.menuIcon, { backgroundColor: '#dbeafe' }]}>
+            <Ionicons name="notifications-outline" size={20} color="#2563eb" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>Notifications</Text>
+            <Text style={styles.menuSubtitle}>Manage alerts & reminders</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <View style={[styles.menuIcon, { backgroundColor: '#dcfce7' }]}>
+            <Ionicons name="lock-closed-outline" size={20} color="#16a34a" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>Privacy & Security</Text>
+            <Text style={styles.menuSubtitle}>Password & data settings</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <View style={[styles.menuIcon, { backgroundColor: '#fef3c7' }]}>
+            <Ionicons name="help-circle-outline" size={20} color="#d97706" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>Help & Support</Text>
+            <Text style={styles.menuSubtitle}>FAQs & contact us</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+          <View style={[styles.menuIcon, { backgroundColor: '#f3e8ff' }]}>
+            <Ionicons name="information-circle-outline" size={20} color="#9333ea" />
+          </View>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>About</Text>
+            <Text style={styles.menuSubtitle}>Version 1.0.0</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+        <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+        <Text style={styles.logoutButtonText}>Sign Out</Text>
+      </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Dairy Farm Manager</Text>
+        <Text style={styles.footerText}>Made with ❤️ for farmers</Text>
+        <Text style={styles.footerVersion}>Farm Management v1.0.0</Text>
       </View>
     </ScrollView>
   );
@@ -162,116 +243,296 @@ const Settings = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f1f5f9',
   },
-  header: {
+  profileHeader: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingTop: 40,
+    paddingBottom: 30,
     paddingHorizontal: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  title: {
-    fontSize: 28,
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  avatarText: {
+    fontSize: 36,
     fontWeight: '700',
-    color: '#1a1a1a',
-    marginTop: 12,
+    color: 'white',
   },
-  subtitle: {
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#22c55e',
+    borderWidth: 3,
+    borderColor: '#1d4ed8',
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 4,
+  },
+  userEmail: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 4,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 12,
+  },
+  farmBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  farmName: {
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '600',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: -20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
   section: {
     backgroundColor: 'white',
     marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
-    padding: 16,
+    marginTop: 20,
+    borderRadius: 20,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#dbeafe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a1a1a',
-    marginLeft: 12,
+    color: '#1e293b',
   },
-  sectionDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  infoRow: {
+  inputContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666',
+  inputIcon: {
+    paddingHorizontal: 16,
+  },
+  modernInput: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingRight: 16,
+    fontSize: 16,
+    color: '#1e293b',
+  },
+  saveButton: {
+    marginTop: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
-  infoValue: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    fontWeight: '500',
-  },
-  currencyPreview: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  currencyLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '600',
+  menuSection: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   currencyDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  currencyBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   currencySymbol: {
-    fontSize: 32,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#007bff',
+    color: '#16a34a',
+  },
+  currencyInfo: {
+    flex: 1,
+  },
+  currencyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
   },
   currencyCode: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: 13,
+    color: '#64748b',
   },
-  saveButton: {
-    marginTop: 8,
+  currencyActive: {
+    marginLeft: 10,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+  },
+  menuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  menuContent: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  menuSubtitle: {
+    fontSize: 13,
+    color: '#94a3b8',
   },
   logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
     marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  logoutButtonText: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 30,
   },
   footerText: {
-    color: '#999',
+    color: '#94a3b8',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  footerVersion: {
+    color: '#cbd5e1',
     fontSize: 12,
   },
 });

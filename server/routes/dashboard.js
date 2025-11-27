@@ -150,18 +150,48 @@ router.get('/', auth, async (req, res) => {
       { $sort: { _id: 1 } }
     ]);
 
-    // Get sales distribution by customer type
+    // Get sales distribution by customer (vendor name from contract or customer name)
+    const salesByCustomer = {};
+    for (const sale of monthSales) {
+      let customerKey = 'Unknown';
+      if (sale.saleType === 'bandhi' && sale.contractId) {
+        // Get vendor name from contract
+        const Contract = require('../models/Contract');
+        const contract = await Contract.findById(sale.contractId);
+        customerKey = contract?.vendorName || 'Unknown Vendor';
+      } else if (sale.customerName) {
+        customerKey = sale.customerName;
+      } else if (sale.saleType === 'mandi') {
+        customerKey = 'Mandi Sales';
+      } else {
+        customerKey = sale.saleType === 'door_to_door' ? 'Door-to-Door' : 'Other';
+      }
+      
+      if (!salesByCustomer[customerKey]) {
+        salesByCustomer[customerKey] = {
+          quantity: 0,
+          revenue: 0,
+          count: 0,
+          saleType: sale.saleType
+        };
+      }
+      salesByCustomer[customerKey].quantity += sale.quantity;
+      salesByCustomer[customerKey].revenue += sale.totalAmount;
+      salesByCustomer[customerKey].count += 1;
+    }
+
+    // Also keep sales by type for compatibility
     const salesByType = monthSales.reduce((acc, sale) => {
-      if (!acc[sale.customerType]) {
-        acc[sale.customerType] = {
+      if (!acc[sale.saleType]) {
+        acc[sale.saleType] = {
           quantity: 0,
           revenue: 0,
           count: 0
         };
       }
-      acc[sale.customerType].quantity += sale.quantity;
-      acc[sale.customerType].revenue += sale.totalAmount;
-      acc[sale.customerType].count += 1;
+      acc[sale.saleType].quantity += sale.quantity;
+      acc[sale.saleType].revenue += sale.totalAmount;
+      acc[sale.saleType].count += 1;
       return acc;
     }, {});
 
@@ -174,18 +204,30 @@ router.get('/', auth, async (req, res) => {
           female: femaleAnimals
         },
         milk: {
+          todayYield,
           thisMonth: monthYield,
-          averageDaily: parseFloat(averageDaily)
+          averageDaily: parseFloat(averageDaily),
+          yieldTrend: parseFloat(yieldTrend),
+          weeklyTrend: weekProduction
         },
         sales: {
+          monthRevenue,
+          revenueTrend: parseFloat(revenueTrend),
           thisMonth: monthRevenue,
-          total: totalRevenue
+          total: totalRevenue,
+          salesByType,
+          salesByCustomer
         },
         expenses: {
+          monthTotal: monthTotalExpenses,
           thisMonth: monthTotalExpenses,
-          total: totalExpensesAmount
+          total: totalExpensesAmount,
+          byCategory: expensesByCategory
         },
         profitLoss: {
+          monthProfit,
+          profitMargin,
+          status: monthProfit >= 0 ? 'profit' : 'loss',
           thisMonth: monthProfit,
           total: totalProfit
         },

@@ -75,6 +75,7 @@ const Login = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
+                placeholderTextColor="#94a3b8"
                 value={formData.email}
                 onChangeText={(value) => handleChange('email', value)}
                 keyboardType="email-address"
@@ -92,6 +93,7 @@ const Login = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"
+                placeholderTextColor="#94a3b8"
                 value={formData.password}
                 onChangeText={(value) => handleChange('password', value)}
                 secureTextEntry={!showPassword}
