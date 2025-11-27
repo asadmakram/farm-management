@@ -653,7 +653,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
-    minWidth: 60,
     alignItems: 'center',
     flexShrink: 0,
   },
@@ -800,7 +799,6 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
-    maxHeight: 500,
   },
   formRow: {
     flexDirection: 'row',

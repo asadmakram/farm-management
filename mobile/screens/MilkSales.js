@@ -203,7 +203,7 @@ const MilkSales = () => {
     setShowPaymentModal(true);
   };
 
-  const filteredSales = filterType === 'all' 
+  const filteredSales = filterType === 'all'
     ? (sales || [])
     : (sales || []).filter(sale => sale.saleType === filterType);
 
@@ -220,10 +220,10 @@ const MilkSales = () => {
             </Text>
           </View>
           <View style={[styles.paymentBadge, { backgroundColor: getPaymentColor(item.paymentStatus) + '15' }]}>
-            <Ionicons 
-              name={item.paymentStatus === 'received' ? 'checkmark-circle' : item.paymentStatus === 'partial' ? 'checkmark-circle-outline' : 'time-outline'} 
-              size={10} 
-              color={getPaymentColor(item.paymentStatus)} 
+            <Ionicons
+              name={item.paymentStatus === 'received' ? 'checkmark-circle' : item.paymentStatus === 'partial' ? 'checkmark-circle-outline' : 'time-outline'}
+              size={10}
+              color={getPaymentColor(item.paymentStatus)}
             />
             <Text style={[styles.paymentText, { color: getPaymentColor(item.paymentStatus) }]}>
               {item.paymentStatus}
@@ -268,7 +268,7 @@ const MilkSales = () => {
                 Pending: <Text style={styles.pendingAmount}>Rs {item.amountPending || item.totalAmount}</Text>
               </Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addPaymentBtn}
               onPress={() => openPaymentModal(item)}
               activeOpacity={0.7}
@@ -303,43 +303,45 @@ const MilkSales = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Summary Cards */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.summaryScroll}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>📋 Bandhi</Text>
-          <Text style={[styles.summaryValue, { color: '#2563eb' }]}>{summary.bandhi?.quantity || 0}L</Text>
-          <Text style={styles.summarySubtext}>Rs {(summary.bandhi?.revenue || 0).toFixed(0)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>🏪 Mandi</Text>
-          <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>{summary.mandi?.quantity || 0}L</Text>
-          <Text style={styles.summarySubtext}>Rs {(summary.mandi?.revenue || 0).toFixed(0)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>🚪 Door-to-Door</Text>
-          <Text style={[styles.summaryValue, { color: '#10b981' }]}>{summary.door_to_door?.quantity || 0}L</Text>
-          <Text style={styles.summarySubtext}>Rs {(summary.door_to_door?.revenue || 0).toFixed(0)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>⏳ Pending</Text>
-          <Text style={[styles.summaryValue, { color: '#ef4444' }]}>Rs {(summary.pending || 0).toFixed(0)}</Text>
-        </View>
-      </ScrollView>
+      <View>
+        {/* Summary Cards */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.summaryScroll}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>📋 Bandhi</Text>
+            <Text style={[styles.summaryValue, { color: '#2563eb' }]}>{summary.bandhi?.quantity || 0}L</Text>
+            <Text style={styles.summarySubtext}>Rs {(summary.bandhi?.revenue || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>🏪 Mandi</Text>
+            <Text style={[styles.summaryValue, { color: '#f59e0b' }]}>{summary.mandi?.quantity || 0}L</Text>
+            <Text style={styles.summarySubtext}>Rs {(summary.mandi?.revenue || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>🚪 Door-to-Door</Text>
+            <Text style={[styles.summaryValue, { color: '#10b981' }]}>{summary.door_to_door?.quantity || 0}L</Text>
+            <Text style={styles.summarySubtext}>Rs {(summary.door_to_door?.revenue || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>⏳ Pending</Text>
+            <Text style={[styles.summaryValue, { color: '#ef4444' }]}>Rs {(summary.pending || 0).toFixed(0)}</Text>
+          </View>
+        </ScrollView>
 
-      {/* Filter Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        {['all', 'bandhi', 'mandi', 'door_to_door'].map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[styles.filterTab, filterType === type && styles.filterTabActive]}
-            onPress={() => setFilterType(type)}
-          >
-            <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive]}>
-              {type === 'all' ? 'All' : getSaleTypeLabel(type)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+        {/* Filter Tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          {['all', 'bandhi', 'mandi', 'door_to_door'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[styles.filterTab, filterType === type && styles.filterTabActive]}
+              onPress={() => setFilterType(type)}
+            >
+              <Text style={[styles.filterTabText, filterType === type && styles.filterTabTextActive]}>
+                {type === 'all' ? 'All' : getSaleTypeLabel(type)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {filteredSales.length > 0 ? (
         <FlatList
@@ -512,8 +514,8 @@ const MilkSales = () => {
               </View>
 
               {/* Total Preview */}
-              <LinearGradient 
-                colors={['#f0fdf4', '#dcfce7']} 
+              <LinearGradient
+                colors={['#f0fdf4', '#dcfce7']}
                 style={styles.totalPreview}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -537,8 +539,8 @@ const MilkSales = () => {
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+              <TouchableOpacity
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -641,8 +643,8 @@ const MilkSales = () => {
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowPaymentModal(false)}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+              <TouchableOpacity
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleAddPayment}
                 disabled={isSubmitting}
               >
@@ -705,18 +707,19 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   summaryScroll: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 16,
-    maxHeight: 90,
+    flexGrow: 4,
+    minHeight: 100,
   },
   summaryCard: {
     backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    paddingVertical: 8,
+    borderRadius: 12,
+    padding: 16,
     marginRight: 8,
-    width: 95,
-    height: 75,
+    minWidth: 80,
+    minHeight: 80,
+    maxHeight: 85,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -724,50 +727,52 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+    marginBottom: 0,
   },
   summaryLabel: {
     fontSize: 9,
     color: '#888',
-    marginBottom: 3,
     fontWeight: '600',
     textAlign: 'center',
   },
   summaryValue: {
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: '700',
-    marginBottom: 1,
+    marginBottom: 8,
     textAlign: 'center',
   },
   summarySubtext: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#666',
-    marginTop: 1,
+    marginTop: 2,
     textAlign: 'center',
   },
   filterScroll: {
     paddingHorizontal: 16,
-    marginBottom: 6,
-    maxHeight: 50,
+    paddingVertical: 8,
+    flexGrow: 0,
   },
   filterTab: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: 'white',
-    marginRight: 6,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    minWidth: 55,
-    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 55,
+    height: 32,
+    marginBottom: 16,
+    maxHeight: 32,
   },
   filterTabActive: {
     backgroundColor: '#2563eb',
     borderColor: '#2563eb',
   },
   filterTabText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#666',
     fontWeight: '500',
     textAlign: 'center',
@@ -823,10 +828,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saleTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 8,
-    minWidth: 60,
     alignItems: 'center',
   },
   saleTypeText: {
