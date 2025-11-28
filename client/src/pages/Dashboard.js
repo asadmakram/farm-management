@@ -205,9 +205,11 @@ const Dashboard = () => {
           <div className="card">
             <h3 className="card-title">Upcoming Vaccinations</h3>
             <div className="alert-list">
-              {dashboardData.alerts.upcomingVaccinations.map(vacc => (
+              {dashboardData.alerts.upcomingVaccinations
+                .filter(vacc => vacc.animalId) // Filter out entries with null animalId
+                .map(vacc => (
                 <div key={vacc._id} className="alert-item">
-                  <strong>{vacc.animalId.tagNumber}</strong> - {vacc.vaccineName}
+                  <strong>{vacc.animalId?.tagNumber || 'Unknown'}</strong> - {vacc.vaccineName}
                   <span className="alert-date">
                     {new Date(vacc.nextDueDate).toLocaleDateString()}
                   </span>
@@ -221,9 +223,11 @@ const Dashboard = () => {
           <div className="card">
             <h3 className="card-title">Recent Calves</h3>
             <div className="alert-list">
-              {dashboardData.alerts.recentCalves.map(calf => (
+              {dashboardData.alerts.recentCalves
+                .filter(calf => calf.animalId) // Filter out entries with null animalId
+                .map(calf => (
                 <div key={calf._id} className="alert-item">
-                  <strong>{calf.animalId.tagNumber}</strong> - {calf.gender}
+                  <strong>{calf.animalId?.tagNumber || 'Unknown'}</strong> - {calf.gender}
                   <span className="alert-date">
                     Birth Weight: {calf.birthWeight} kg
                   </span>

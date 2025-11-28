@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaMoneyBillWave } from 'react-icons/fa';
+import { FaPlus, FaMoneyBillWave, FaWallet } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -8,6 +8,14 @@ const MilkSales = () => {
   const [sales, setSales] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [currencies, setCurrencies] = useState([]);
+  const [showPaymentAllocationModal, setShowPaymentAllocationModal] = useState(false);
+  const [paymentAllocationData, setPaymentAllocationData] = useState({
+    customerName: '',
+    amount: '',
+    paymentMethod: 'cash',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [uniqueCustomers, setUniqueCustomers] = useState([]);
   const defaultSummary = {
     totalQuantity: 0,
     totalRevenue: 0,
@@ -46,8 +54,17 @@ const MilkSales = () => {
   const fetchSales = async () => {
     try {
       const response = await api.get('/milk/sales');
-      setSales(response.data.data || []);
+      const salesData = response.data.data || [];
+      setSales(salesData);
       setSummary(response.data.summary || defaultSummary);
+      
+      // Extract unique customer names for payment allocation
+      const customers = [...new Set(salesData
+        .filter(sale => sale.customerName || sale.contractId?.vendorName)
+        .map(sale => sale.customerName || sale.contractId?.vendorName)
+      )];
+      setUniqueCustomers(customers);
+      
       setLoading(false);
     } catch (error) {
       toast.error('Error fetching sales');
@@ -111,6 +128,51 @@ const MilkSales = () => {
     }
   };
 
+  const handlePaymentAllocation = async (e) => {
+    e.preventDefault();
+    if (!paymentAllocationData.customerName || !paymentAllocationData.amount) {
+      toast.error('Please fill customer name and amount');
+      return;
+    }
+    try {
+      const response = await api.post('/milk/sales/auto-allocate-payment', {
+        customerName: paymentAllocationData.customerName,
+        amount: Number(paymentAllocationData.amount),
+        paymentMethod: paymentAllocationData.paymentMethod,
+        date: paymentAllocationData.date
+      });
+      
+      const { remainingAmount, data } = response.data;
+      
+      if (remainingAmount > 0) {
+        toast.info(`Payment allocated to ${data.length} sale(s). Excess amount: ₹${remainingAmount.toFixed(2)}`);
+      } else {
+        toast.success(`Payment of ₹${paymentAllocationData.amount} allocated to ${data.length} sale(s)`);
+      }
+      
+      setShowPaymentAllocationModal(false);
+      setPaymentAllocationData({
+        customerName: '',
+        amount: '',
+        paymentMethod: 'cash',
+        date: new Date().toISOString().split('T')[0]
+      });
+      fetchSales();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error allocating payment');
+    }
+  };
+
+  // Get pending amount for a customer
+  const getCustomerPendingAmount = (customerName) => {
+    return sales
+      .filter(sale => 
+        (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
+        (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
+      )
+      .reduce((sum, sale) => sum + (sale.amountPending || sale.totalAmount), 0);
+  };
+
   const resetForm = () => {
     setFormData({
       date: new Date().toISOString().split('T')[0],
@@ -155,9 +217,14 @@ const MilkSales = () => {
     <div className="container mt-3">
       <div className="flex-between mb-3">
         <h1 className="page-title"><FaMoneyBillWave /> Milk Sales</h1>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <FaPlus /> Add Sale
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn btn-outline" style={{ color: 'var(--success-color)', borderColor: 'var(--success-color)' }} onClick={() => setShowPaymentAllocationModal(true)}>
+            <FaWallet /> Receive Payment
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <FaPlus /> Add Sale
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -233,9 +300,10 @@ const MilkSales = () => {
                 <th className="text-right">Quantity (L)</th>
                 <th className="text-right">Rate/L</th>
                 <th className="text-right">Total</th>
-                <th className="text-center">Currency</th>
+                <th className="text-right">Paid</th>
+                <th className="text-right">Pending</th>
                 <th className="text-center">Payment Status</th>
-                <th className="text-center">Actions</th>
+                <th className="text-center">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -262,10 +330,11 @@ const MilkSales = () => {
                   <td data-label="Quantity" className="text-right">{sale.quantity}</td>
                   <td data-label="Rate/L" className="text-right">{sale.currency} {sale.ratePerLiter.toFixed(2)}</td>
                   <td data-label="Total" className="text-right"><strong>{sale.currency} {sale.totalAmount.toFixed(2)}</strong></td>
-                  <td data-label="Currency" className="text-center">
-                    <span className="status-badge currency">
-                      {sale.currency}
-                    </span>
+                  <td data-label="Paid" className="text-right" style={{ color: 'var(--success-color)' }}>
+                    {sale.currency} {(sale.amountPaid || 0).toFixed(2)}
+                  </td>
+                  <td data-label="Pending" className="text-right" style={{ color: sale.amountPending > 0 ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
+                    {sale.currency} {(sale.amountPending || 0).toFixed(2)}
                   </td>
                   <td data-label="Payment" className="text-center">
                     <select 
@@ -274,6 +343,7 @@ const MilkSales = () => {
                       onChange={(e) => updatePaymentStatus(sale._id, e.target.value)}
                     >
                       <option value="pending">Pending</option>
+                      <option value="partial">Partial</option>
                       <option value="received">Received</option>
                       <option value="returned">Returned</option>
                     </select>
@@ -579,6 +649,124 @@ const MilkSales = () => {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">Record Sale</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Allocation Modal */}
+      {showPaymentAllocationModal && (
+        <div className="modal-overlay" onClick={() => setShowPaymentAllocationModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💰 Receive Payment from Customer</h2>
+              <button className="modal-close" onClick={() => setShowPaymentAllocationModal(false)}>&times;</button>
+            </div>
+            <form onSubmit={handlePaymentAllocation}>
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>👤</span>
+                  <span>Customer Details</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Customer/Vendor Name *</label>
+                  <select
+                    className="form-select"
+                    value={paymentAllocationData.customerName}
+                    onChange={e => setPaymentAllocationData({...paymentAllocationData, customerName: e.target.value})}
+                    required
+                  >
+                    <option value="">Select a customer</option>
+                    {uniqueCustomers.map(customer => {
+                      const pendingAmount = getCustomerPendingAmount(customer);
+                      return (
+                        <option key={customer} value={customer}>
+                          {customer} {pendingAmount > 0 ? `(Pending: ₹${pendingAmount.toFixed(2)})` : '(No pending)'}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                
+                {paymentAllocationData.customerName && (
+                  <div className="info-box" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)', border: '1px solid #f59e0b', borderRadius: '0.5rem', padding: '1rem', margin: '1rem 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#b45309', marginBottom: '0.5rem' }}>
+                      <span>⏳</span>
+                      <span>Pending Amount</span>
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#b45309' }}>
+                      ₹{getCustomerPendingAmount(paymentAllocationData.customerName).toFixed(2)}
+                    </div>
+                    <small style={{ color: '#92400e', fontSize: '0.75rem' }}>
+                      This amount will be auto-allocated from oldest transactions first (FIFO)
+                    </small>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>💵</span>
+                  <span>Payment Details</span>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Amount Received *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="form-input"
+                      value={paymentAllocationData.amount}
+                      onChange={e => setPaymentAllocationData({...paymentAllocationData, amount: e.target.value})}
+                      placeholder="Enter amount"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Payment Method</label>
+                    <select
+                      className="form-select"
+                      value={paymentAllocationData.paymentMethod}
+                      onChange={e => setPaymentAllocationData({...paymentAllocationData, paymentMethod: e.target.value})}
+                    >
+                      <option value="cash">💵 Cash</option>
+                      <option value="bank_transfer">🏦 Bank Transfer</option>
+                      <option value="cheque">📝 Cheque</option>
+                      <option value="other">📦 Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Payment Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={paymentAllocationData.date}
+                    onChange={e => setPaymentAllocationData({...paymentAllocationData, date: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="info-box" style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', border: '1px solid #10b981', borderRadius: '0.5rem', padding: '1rem', margin: '1rem 0' }}>
+                <div style={{ fontWeight: '600', color: '#047857', marginBottom: '0.5rem' }}>
+                  💡 How Payment Allocation Works
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#065f46', fontSize: '0.875rem' }}>
+                  <li>Payment is allocated to the oldest pending transaction first</li>
+                  <li>If payment exceeds transaction amount, remainder goes to next transaction</li>
+                  <li>Transactions are marked as "Received" when fully paid</li>
+                  <li>Partial payments update the transaction to "Partial" status</li>
+                </ul>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setShowPaymentAllocationModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: 'var(--success-color)' }}>
+                  Allocate Payment
+                </button>
               </div>
             </form>
           </div>

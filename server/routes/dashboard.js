@@ -109,6 +109,7 @@ router.get('/', auth, async (req, res) => {
     
     const upcomingVaccinations = await Vaccination.find({
       userId,
+      animalId: { $ne: null }, // Filter out vaccinations with deleted animals
       nextDueDate: { 
         $gte: today, 
         $lte: thirtyDaysFromNow 
@@ -118,17 +119,24 @@ router.get('/', auth, async (req, res) => {
       .sort({ nextDueDate: 1 })
       .limit(5);
 
+    // Filter out any that still have null animalId after populate (orphaned records)
+    const validVaccinations = upcomingVaccinations.filter(v => v.animalId !== null);
+
     // Get recent calves (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     const recentCalves = await Calf.find({
       userId,
+      animalId: { $ne: null }, // Filter out calves with deleted animals
       birthDate: { $gte: thirtyDaysAgo }
     })
       .populate('animalId', 'tagNumber name')
       .populate('motherId', 'tagNumber name')
       .sort({ birthDate: -1 });
+
+    // Filter out any that still have null animalId after populate (orphaned records)
+    const validCalves = recentCalves.filter(c => c.animalId !== null);
 
     // Get last 7 days production trend
     const sevenDaysAgo = new Date();
@@ -232,8 +240,8 @@ router.get('/', auth, async (req, res) => {
           total: totalProfit
         },
         alerts: {
-          upcomingVaccinations,
-          recentCalves
+          upcomingVaccinations: validVaccinations,
+          recentCalves: validCalves
         }
       }
     });

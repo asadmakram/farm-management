@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaEdit, FaCheckCircle } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaCheckCircle, FaTrash } from 'react-icons/fa';
 import './PageStyles.css';
 
 function Contracts() {
@@ -9,6 +9,9 @@ function Contracts() {
   const [summary, setSummary] = useState({ active: 0, totalAdvanceHeld: 0, totalAdvanceReturned: 0 });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingContract, setEditingContract] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState(null);
   const [formData, setFormData] = useState({
     vendorName: '',
     startDate: '',
@@ -37,9 +40,15 @@ function Contracts() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/contracts', formData);
-      toast.success('Contract created successfully!');
+      if (editingContract) {
+        await api.put(`/contracts/${editingContract._id}`, formData);
+        toast.success('Contract updated successfully!');
+      } else {
+        await api.post('/contracts', formData);
+        toast.success('Contract created successfully!');
+      }
       setShowModal(false);
+      setEditingContract(null);
       setFormData({
         vendorName: '',
         startDate: '',
@@ -50,7 +59,38 @@ function Contracts() {
       });
       fetchContracts();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error creating contract');
+      toast.error(error.response?.data?.message || 'Error saving contract');
+    }
+  };
+
+  const handleEdit = (contract) => {
+    setEditingContract(contract);
+    setFormData({
+      vendorName: contract.vendorName,
+      startDate: contract.startDate.split('T')[0],
+      endDate: contract.endDate.split('T')[0],
+      ratePerLiter: contract.ratePerLiter,
+      advanceAmount: contract.advanceAmount,
+      notes: contract.notes || ''
+    });
+    setShowModal(true);
+  };
+
+  const handleDeleteClick = (contract) => {
+    setContractToDelete(contract);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!contractToDelete) return;
+    try {
+      await api.delete(`/contracts/${contractToDelete._id}`);
+      toast.success('Contract deleted successfully!');
+      setShowDeleteConfirm(false);
+      setContractToDelete(null);
+      fetchContracts();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error deleting contract');
     }
   };
 
@@ -137,16 +177,34 @@ function Contracts() {
                   </span>
                 </td>
                 <td>
-                  {contract.advanceStatus === 'held' && contract.status === 'active' && (
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                     <button 
                       className="btn btn-sm btn-outline"
-                      style={{ color: 'var(--success-color)', borderColor: 'var(--success-color)' }}
-                      onClick={() => handleReturnAdvance(contract._id)}
-                      title="Return Advance & Complete Contract"
+                      style={{ color: 'var(--primary-color)', borderColor: 'var(--primary-color)' }}
+                      onClick={() => handleEdit(contract)}
+                      title="Edit Contract"
                     >
-                      <FaCheckCircle /> Return
+                      <FaEdit />
                     </button>
-                  )}
+                    {contract.advanceStatus === 'held' && contract.status === 'active' && (
+                      <button 
+                        className="btn btn-sm btn-outline"
+                        style={{ color: 'var(--success-color)', borderColor: 'var(--success-color)' }}
+                        onClick={() => handleReturnAdvance(contract._id)}
+                        title="Return Advance & Complete Contract"
+                      >
+                        <FaCheckCircle />
+                      </button>
+                    )}
+                    <button 
+                      className="btn btn-sm btn-outline"
+                      style={{ color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}
+                      onClick={() => handleDeleteClick(contract)}
+                      title="Delete Contract"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -156,9 +214,9 @@ function Contracts() {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingContract(null); }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>New Bandhi Contract</h2>
+            <h2>{editingContract ? 'Edit Contract' : 'New Bandhi Contract'}</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
@@ -232,12 +290,44 @@ function Contracts() {
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => { setShowModal(false); setEditingContract(null); }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">Create Contract</button>
+                <button type="submit" className="btn btn-primary">
+                  {editingContract ? 'Update Contract' : 'Create Contract'}
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 style={{ color: 'var(--danger-color)' }}>⚠️ Confirm Delete</h2>
+            <p style={{ marginBottom: '1.5rem' }}>
+              Are you sure you want to delete the contract with <strong>{contractToDelete?.vendorName}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="btn btn-outline" 
+                onClick={() => { setShowDeleteConfirm(false); setContractToDelete(null); }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn" 
+                style={{ backgroundColor: 'var(--danger-color)', color: 'white' }}
+                onClick={handleDeleteConfirm}
+              >
+                Delete Contract
+              </button>
+            </div>
           </div>
         </div>
       )}

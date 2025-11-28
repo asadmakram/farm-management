@@ -50,6 +50,14 @@ const MilkSales = () => {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
+  const [showBulkPaymentModal, setShowBulkPaymentModal] = useState(false);
+  const [bulkPaymentData, setBulkPaymentData] = useState({
+    customerName: '',
+    amount: '',
+    paymentMethod: 'cash',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [uniqueCustomers, setUniqueCustomers] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -62,9 +70,18 @@ const MilkSales = () => {
         api.get('/milk/sales'),
         api.get('/contracts?status=active')
       ]);
-      setSales(salesRes.data.data || []);
+      const salesData = salesRes.data.data || [];
+      setSales(salesData);
       setSummary(salesRes.data.summary || defaultSummary);
       setContracts(contractsRes.data.contracts || []);
+      
+      // Extract unique customer names for payment allocation
+      const customers = [...new Set(salesData
+        .filter(sale => sale.customerName || sale.contractId?.vendorName)
+        .map(sale => sale.customerName || sale.contractId?.vendorName)
+      )];
+      setUniqueCustomers(customers);
+      
       setLoading(false);
     } catch (error) {
       Alert.alert(t('common.error'), t('sales.fetchError'));
@@ -205,6 +222,60 @@ const MilkSales = () => {
     setShowPaymentModal(true);
   };
 
+  // Get pending amount for a customer
+  const getCustomerPendingAmount = (customerName) => {
+    return sales
+      .filter(sale => 
+        (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
+        (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
+      )
+      .reduce((sum, sale) => sum + (sale.amountPending || sale.totalAmount), 0);
+  };
+
+  const handleBulkPayment = async () => {
+    if (!bulkPaymentData.customerName || !bulkPaymentData.amount) {
+      Alert.alert(t('common.error'), 'Please fill customer name and amount');
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      const response = await api.post('/milk/sales/auto-allocate-payment', {
+        customerName: bulkPaymentData.customerName,
+        amount: Number(bulkPaymentData.amount),
+        paymentMethod: bulkPaymentData.paymentMethod,
+        date: bulkPaymentData.date
+      });
+      
+      const { remainingAmount, data } = response.data;
+      
+      if (remainingAmount > 0) {
+        Alert.alert(
+          t('common.success'), 
+          `Payment allocated to ${data.length} sale(s). Excess amount: Rs ${remainingAmount.toFixed(2)}`
+        );
+      } else {
+        Alert.alert(
+          t('common.success'), 
+          `Payment of Rs ${bulkPaymentData.amount} allocated to ${data.length} sale(s)`
+        );
+      }
+      
+      setShowBulkPaymentModal(false);
+      setBulkPaymentData({
+        customerName: '',
+        amount: '',
+        paymentMethod: 'cash',
+        date: new Date().toISOString().split('T')[0]
+      });
+      fetchData();
+    } catch (error) {
+      Alert.alert(t('common.error'), error.response?.data?.message || 'Error allocating payment');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredSales = filterType === 'all'
     ? (sales || [])
     : (sales || []).filter(sale => sale.saleType === filterType);
@@ -300,9 +371,14 @@ const MilkSales = () => {
           <Text style={[styles.title, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>💰 {t('sales.title')}</Text>
           <Text style={[styles.subtitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.revenueSummary', { amount: (summary.totalRevenue || 0).toFixed(0) })}</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
-          <Ionicons name="add" size={24} color="white" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.receivePaymentButton} onPress={() => setShowBulkPaymentModal(true)}>
+            <Ionicons name="wallet-outline" size={20} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
+            <Ionicons name="add" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View>
@@ -656,6 +732,111 @@ const MilkSales = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Bulk Payment Modal */}
+      <Modal visible={showBulkPaymentModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>💰 Receive Payment from Customer</Text>
+              <TouchableOpacity onPress={() => setShowBulkPaymentModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.formGroup}>
+                <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>Customer/Vendor *</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={bulkPaymentData.customerName}
+                    onValueChange={(value) => setBulkPaymentData({ ...bulkPaymentData, customerName: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select a customer" value="" />
+                    {uniqueCustomers.map(customer => {
+                      const pendingAmount = getCustomerPendingAmount(customer);
+                      return (
+                        <Picker.Item 
+                          key={customer} 
+                          label={`${customer} ${pendingAmount > 0 ? `(Pending: Rs ${pendingAmount.toFixed(0)})` : '(No pending)'}`}
+                          value={customer} 
+                        />
+                      );
+                    })}
+                  </Picker>
+                </View>
+              </View>
+
+              {bulkPaymentData.customerName && (
+                <View style={styles.pendingAmountCard}>
+                  <Text style={styles.pendingAmountLabel}>⏳ Pending Amount</Text>
+                  <Text style={styles.pendingAmountValue}>Rs {getCustomerPendingAmount(bulkPaymentData.customerName).toFixed(2)}</Text>
+                  <Text style={styles.pendingAmountSubtext}>Will be auto-allocated from oldest transactions first (FIFO)</Text>
+                </View>
+              )}
+
+              <View style={styles.formGroup}>
+                <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>Amount Received *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={bulkPaymentData.amount}
+                  onChangeText={(text) => setBulkPaymentData({ ...bulkPaymentData, amount: text })}
+                  placeholder="Enter amount"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>Payment Method</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={bulkPaymentData.paymentMethod}
+                    onValueChange={(value) => setBulkPaymentData({ ...bulkPaymentData, paymentMethod: value })}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="💵 Cash" value="cash" />
+                    <Picker.Item label="🏦 Bank Transfer" value="bank_transfer" />
+                    <Picker.Item label="📝 Cheque" value="cheque" />
+                    <Picker.Item label="📦 Other" value="other" />
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <DatePickerInput
+                  label="Payment Date"
+                  value={bulkPaymentData.date}
+                  onChange={(date) => setBulkPaymentData({ ...bulkPaymentData, date })}
+                  themeColor="#10b981"
+                  required
+                />
+              </View>
+
+              <View style={styles.infoBox}>
+                <Text style={styles.infoBoxTitle}>💡 How Payment Allocation Works</Text>
+                <Text style={styles.infoBoxText}>• Payment is allocated to oldest pending transaction first</Text>
+                <Text style={styles.infoBoxText}>• If payment exceeds transaction, remainder goes to next</Text>
+                <Text style={styles.infoBoxText}>• Fully paid transactions are marked as "Received"</Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowBulkPaymentModal(false)}>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                onPress={handleBulkPayment}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.submitButtonText}>{isSubmitting ? 'Allocating...' : 'Allocate Payment'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -707,6 +888,62 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  receivePaymentButton: {
+    backgroundColor: '#3b82f6',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  pendingAmountCard: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  pendingAmountLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#b45309',
+    marginBottom: 4,
+  },
+  pendingAmountValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#b45309',
+    marginBottom: 4,
+  },
+  pendingAmountSubtext: {
+    fontSize: 12,
+    color: '#92400e',
+  },
+  infoBox: {
+    backgroundColor: '#d1fae5',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  infoBoxTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#047857',
+    marginBottom: 8,
+  },
+  infoBoxText: {
+    fontSize: 12,
+    color: '#065f46',
+    marginBottom: 4,
   },
   summaryScroll: {
     paddingVertical: 4,

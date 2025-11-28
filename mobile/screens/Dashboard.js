@@ -317,7 +317,7 @@ const Dashboard = ({ navigation }) => {
       )}
 
       {/* Alerts Section */}
-      {dashboardData.alerts?.upcomingVaccinations?.length > 0 && (
+      {dashboardData.alerts?.upcomingVaccinations?.filter(v => v.animalId).length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={[styles.sectionIcon, { backgroundColor: '#fee2e2' }]}>
@@ -325,10 +325,10 @@ const Dashboard = ({ navigation }) => {
             </View>
             <Text style={styles.sectionTitle}>Upcoming Vaccinations</Text>
             <View style={styles.alertBadge}>
-              <Text style={styles.alertBadgeText}>{dashboardData.alerts.upcomingVaccinations.length}</Text>
+              <Text style={styles.alertBadgeText}>{dashboardData.alerts.upcomingVaccinations.filter(v => v.animalId).length}</Text>
             </View>
           </View>
-          {dashboardData.alerts.upcomingVaccinations.map((vacc, index) => (
+          {dashboardData.alerts.upcomingVaccinations.filter(v => v.animalId).map((vacc, index) => (
             <View key={index} style={styles.alertItem}>
               <View style={[styles.alertIcon, { backgroundColor: '#fef3c7' }]}>
                 <Ionicons name="medical" size={20} color="#d97706" />
@@ -346,7 +346,7 @@ const Dashboard = ({ navigation }) => {
       )}
 
       {/* Recent Calves */}
-      {dashboardData.alerts?.recentCalves?.length > 0 && (
+      {dashboardData.alerts?.recentCalves?.filter(c => c.animalId).length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={[styles.sectionIcon, { backgroundColor: '#dbeafe' }]}>
@@ -354,7 +354,7 @@ const Dashboard = ({ navigation }) => {
             </View>
             <Text style={styles.sectionTitle}>Recent Calves</Text>
           </View>
-          {dashboardData.alerts.recentCalves.map((calf, index) => (
+          {dashboardData.alerts.recentCalves.filter(c => c.animalId).map((calf, index) => (
             <View key={index} style={styles.alertItem}>
               <View style={[styles.alertIcon, { backgroundColor: '#dbeafe' }]}>
                 <Ionicons name="paw" size={20} color="#2563eb" />

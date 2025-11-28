@@ -12,6 +12,9 @@ const Contracts = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingContract, setEditingContract] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState(null);
   const [formData, setFormData] = useState({
     vendorName: '',
     startDate: new Date().toISOString().split('T')[0],
@@ -52,19 +55,58 @@ const Contracts = ({ navigation }) => {
     }
     setIsSubmitting(true);
     try {
-      await api.post('/contracts', {
+      const payload = {
         ...formData,
         ratePerLiter: Number(formData.ratePerLiter),
         advanceAmount: Number(formData.advanceAmount)
-      });
-      Alert.alert('Success', 'Contract created successfully!');
+      };
+      
+      if (editingContract) {
+        await api.put(`/contracts/${editingContract._id}`, payload);
+        Alert.alert('Success', 'Contract updated successfully!');
+      } else {
+        await api.post('/contracts', payload);
+        Alert.alert('Success', 'Contract created successfully!');
+      }
       setShowModal(false);
+      setEditingContract(null);
       resetForm();
       fetchContracts();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error creating contract');
+      Alert.alert('Error', error.response?.data?.message || 'Error saving contract');
     }
     setIsSubmitting(false);
+  };
+
+  const handleEdit = (contract) => {
+    setEditingContract(contract);
+    setFormData({
+      vendorName: contract.vendorName,
+      startDate: contract.startDate.split('T')[0],
+      endDate: contract.endDate.split('T')[0],
+      ratePerLiter: contract.ratePerLiter.toString(),
+      advanceAmount: contract.advanceAmount.toString(),
+      notes: contract.notes || ''
+    });
+    setShowModal(true);
+  };
+
+  const handleDeletePress = (contract) => {
+    setContractToDelete(contract);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!contractToDelete) return;
+    try {
+      await api.delete(`/contracts/${contractToDelete._id}`);
+      Alert.alert('Success', 'Contract deleted successfully!');
+      setShowDeleteConfirm(false);
+      setContractToDelete(null);
+      fetchContracts();
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Error deleting contract');
+    }
   };
 
   const handleReturnAdvance = async (contractId) => {
@@ -161,6 +203,24 @@ const Contracts = ({ navigation }) => {
           <Text style={styles.returnButtonText}>Return Advance & Complete</Text>
         </TouchableOpacity>
       )}
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsRow}>
+        <TouchableOpacity 
+          style={styles.editButton} 
+          onPress={() => handleEdit(item)}
+        >
+          <Ionicons name="create-outline" size={18} color="#3b82f6" />
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.deleteButton} 
+          onPress={() => handleDeletePress(item)}
+        >
+          <Ionicons name="trash-outline" size={18} color="#ef4444" />
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -228,8 +288,8 @@ const Contracts = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Bandhi Contract</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <Text style={styles.modalTitle}>{editingContract ? 'Edit Contract' : 'New Bandhi Contract'}</Text>
+              <TouchableOpacity onPress={() => { setShowModal(false); setEditingContract(null); }}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -303,7 +363,7 @@ const Contracts = ({ navigation }) => {
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowModal(false); setEditingContract(null); }}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
@@ -311,7 +371,40 @@ const Contracts = ({ navigation }) => {
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? 'Creating...' : 'Create Contract'}</Text>
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Saving...' : (editingContract ? 'Update Contract' : 'Create Contract')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal visible={showDeleteConfirm} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: 250 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: '#ef4444' }]}>⚠️ Confirm Delete</Text>
+              <TouchableOpacity onPress={() => { setShowDeleteConfirm(false); setContractToDelete(null); }}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={styles.deleteConfirmText}>
+                Are you sure you want to delete the contract with <Text style={{ fontWeight: 'bold' }}>{contractToDelete?.vendorName}</Text>?
+              </Text>
+              <Text style={styles.deleteConfirmSubtext}>This action cannot be undone.</Text>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowDeleteConfirm(false); setContractToDelete(null); }}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.submitButton, { backgroundColor: '#ef4444' }]} 
+                onPress={handleDeleteConfirm}
+              >
+                <Text style={styles.submitButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -492,6 +585,51 @@ const styles = StyleSheet.create({
     color: '#10b981',
     fontWeight: '600',
     fontSize: 14,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    gap: 4,
+  },
+  editButtonText: {
+    color: '#3b82f6',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  deleteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    gap: 4,
+  },
+  deleteButtonText: {
+    color: '#ef4444',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  deleteConfirmText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  deleteConfirmSubtext: {
+    fontSize: 14,
+    color: '#666',
   },
   emptyState: {
     flex: 1,
