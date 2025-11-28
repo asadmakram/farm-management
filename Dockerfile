@@ -8,7 +8,8 @@ COPY client/package*.json ./client/
 
 # Install dependencies
 RUN npm install
-RUN cd client && npm install
+# Install client dependencies with legacy peer deps to avoid react-scripts/typescript conflict
+RUN cd client && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
