@@ -1,0 +1,15 @@
+{
+  "login": {
+    "title": "Login to Your Account",
+    "email": "Email Address",
+    "password": "Password",
+    "submit": "Login",
+    "submitting": "Logging in...",
+    "noAccount": "Don't have an account?",
+    "register": "Register here",
+    "success": "Login successful!"
+  },
+  "app": {
+    "title": "Dairy Farm Manager"
+  }
+}

@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import FormInput from '../components/FormInput';
 import FormButton from '../components/FormButton';
 
 const Register = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -103,21 +105,24 @@ const Register = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.headerSection}>
+          <TouchableOpacity onPress={() => i18n.changeLanguage(i18n.language === 'en' ? 'ur' : 'en')} style={styles.langButton}>
+            <Text style={styles.langButtonText}>{i18n.language === 'en' ? 'اردو' : 'English'}</Text>
+          </TouchableOpacity>
           <View style={styles.logoContainer}>
             <Text style={styles.logo}>🐄</Text>
           </View>
-          <Text style={styles.mainTitle}>Create Account</Text>
-          <Text style={styles.subtitle}>Join Dairy Farm Manager</Text>
+          <Text style={styles.mainTitle}>{t('register.title')}</Text>
+          <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>{t('register.personalInfo')}</Text>
           
           <FormInput
-            label="Full Name"
+            label={t('register.fullName')}
             value={formData.name}
             onChangeText={(value) => handleChange('name', value)}
-            placeholder="Enter your full name"
+            placeholder={t('register.fullName')}
             icon="person-outline"
             error={errors.name}
             required
@@ -125,10 +130,10 @@ const Register = ({ navigation }) => {
           />
 
           <FormInput
-            label="Email Address"
+            label={t('register.email')}
             value={formData.email}
             onChangeText={(value) => handleChange('email', value)}
-            placeholder="Enter your email"
+            placeholder={t('register.email')}
             icon="mail-outline"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -138,23 +143,23 @@ const Register = ({ navigation }) => {
           />
 
           <FormInput
-            label="Phone Number"
+            label={t('register.phone')}
             value={formData.phoneNumber}
             onChangeText={(value) => handleChange('phoneNumber', value)}
-            placeholder="Enter your phone number"
+            placeholder={t('register.phone')}
             icon="call-outline"
             keyboardType="phone-pad"
             error={errors.phoneNumber}
             editable={!loading}
           />
 
-          <Text style={styles.sectionTitle}>Farm Details</Text>
+          <Text style={styles.sectionTitle}>{t('register.farmDetails')}</Text>
 
           <FormInput
-            label="Farm Name"
+            label={t('register.farmName')}
             value={formData.farmName}
             onChangeText={(value) => handleChange('farmName', value)}
-            placeholder="Enter your farm name"
+            placeholder={t('register.farmName')}
             icon="home-outline"
             error={errors.farmName}
             required
@@ -162,23 +167,23 @@ const Register = ({ navigation }) => {
           />
 
           <FormInput
-            label="Farm Address"
+            label={t('register.farmAddress')}
             value={formData.address}
             onChangeText={(value) => handleChange('address', value)}
-            placeholder="Enter farm address (optional)"
+            placeholder={`${t('register.farmAddress')} (${t('common.optional')})`}
             icon="location-outline"
             multiline
             numberOfLines={3}
             editable={!loading}
           />
 
-          <Text style={styles.sectionTitle}>Security</Text>
+          <Text style={styles.sectionTitle}>{t('register.security')}</Text>
 
           <FormInput
-            label="Password"
+            label={t('register.password')}
             value={formData.password}
             onChangeText={(value) => handleChange('password', value)}
-            placeholder="Create a password"
+            placeholder={t('register.password')}
             icon="lock-closed-outline"
             secureTextEntry={!showPassword}
             error={errors.password}
@@ -196,10 +201,10 @@ const Register = ({ navigation }) => {
           />
 
           <FormInput
-            label="Confirm Password"
+            label={t('register.confirmPassword')}
             value={formData.confirmPassword}
             onChangeText={(value) => handleChange('confirmPassword', value)}
-            placeholder="Re-enter your password"
+            placeholder={t('register.confirmPassword')}
             icon="lock-closed-outline"
             secureTextEntry={!showConfirmPassword}
             error={errors.confirmPassword}
@@ -217,7 +222,7 @@ const Register = ({ navigation }) => {
           />
 
           <FormButton
-            title="Create Account"
+            title={t('register.createAccount')}
             onPress={handleSubmit}
             variant="success"
             icon="checkmark-circle-outline"
@@ -229,7 +234,7 @@ const Register = ({ navigation }) => {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>{t('common.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -238,14 +243,14 @@ const Register = ({ navigation }) => {
             disabled={loading}
           >
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <Text style={styles.loginLink}>Sign In</Text>
+              <Text style={styles.loginText}>{t('register.alreadyHaveAccount')} </Text>
+              <Text style={styles.loginLink}>{t('register.signIn')}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2024 Dairy Farm Manager</Text>
+          <Text style={styles.footerText}>{t('login.footer')}</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -347,6 +352,16 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#999',
     fontSize: 12,
+  },
+  langButton: {
+    position: 'absolute',
+    top: -20,
+    right: 0,
+    padding: 8,
+  },
+  langButtonText: {
+    color: '#007bff',
+    fontWeight: '600',
   },
 });
 

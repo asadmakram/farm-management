@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../utils/api';
 import DatePickerInput from '../components/DatePickerInput';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,8 @@ const MilkProduction = () => {
     fetchData();
   }, []);
 
+  const { t } = useTranslation();
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -49,7 +52,7 @@ const MilkProduction = () => {
       setAnimals((animalsRes.data.data || []).filter(a => a.status === 'active' && a.gender === 'female'));
       setLoading(false);
     } catch (error) {
-      Alert.alert('Error', 'Error fetching data');
+      Alert.alert(t('common.error'), t('milk.fetchError'));
       setLoading(false);
     }
   };
@@ -65,21 +68,21 @@ const MilkProduction = () => {
     try {
       if (mode === 'per-animal') {
         if (!formData.animalId || (!formData.morningYield && !formData.eveningYield)) {
-          Alert.alert('Error', 'Please select an animal and enter at least one yield value');
+          Alert.alert(t('common.error'), t('milk.selectAnimalAndYield'));
           setIsSubmitting(false);
           return;
         }
         if (editingId) {
           await api.put(`/milk/production/${editingId}`, formData);
-          Alert.alert('Success', 'Milk production record updated successfully');
+          Alert.alert(t('common.success'), t('milk.updateSuccess'));
         } else {
           await api.post('/milk/production', formData);
-          Alert.alert('Success', 'Milk production record added successfully');
+          Alert.alert(t('common.success'), t('milk.addSuccess'));
         }
       } else {
         const activeAnimals = animals.filter(a => a.status === 'active' && a.gender === 'female');
         if (activeAnimals.length === 0) {
-          Alert.alert('Error', 'No active female animals to assign totals to');
+          Alert.alert(t('common.error'), t('milk.noActiveFemale'));
           setIsSubmitting(false);
           return;
         }
@@ -88,7 +91,7 @@ const MilkProduction = () => {
         const evening = Number(totalData.eveningTotal || 0);
         
         if (morning === 0 && evening === 0) {
-          Alert.alert('Error', 'Please enter at least one total value');
+          Alert.alert(t('common.error'), t('milk.enterAtLeastOneTotal'));
           setIsSubmitting(false);
           return;
         }
@@ -108,7 +111,7 @@ const MilkProduction = () => {
               notes: 'Auto divided from total'
             });
           }
-          Alert.alert('Success', 'Total production recorded and divided among animals');
+          Alert.alert(t('common.success'), t('milk.totalDividedSuccess'));
         }
       }
       
@@ -116,27 +119,27 @@ const MilkProduction = () => {
       setShowModal(false);
       resetForm();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error saving record');
+      Alert.alert(t('common.error'), error.response?.data?.message || t('milk.saveError'));
     }
     setIsSubmitting(false);
   };
 
   const handleDelete = async (id) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this record?',
+      t('milk.deleteConfirmTitle'),
+      t('milk.deleteConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await api.delete(`/milk/production/${id}`);
-              Alert.alert('Success', 'Record deleted successfully');
+              Alert.alert(t('common.success'), t('milk.deleteSuccess'));
               fetchData();
             } catch (error) {
-              Alert.alert('Error', 'Error deleting record');
+              Alert.alert(t('common.error'), t('milk.deleteError'));
             }
           }
         }
@@ -271,7 +274,7 @@ const MilkProduction = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#3b82f6" />
-        <Text style={styles.loadingText}>Loading records...</Text>
+        <Text style={styles.loadingText}>{t('milk.loading')}</Text>
       </View>
     );
   }
@@ -299,8 +302,8 @@ const MilkProduction = () => {
       >
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.headerSubtitle}>Milk Production</Text>
-            <Text style={styles.headerTitle}>Track Daily Yields</Text>
+            <Text style={styles.headerSubtitle}>{t('milk.subtitle')}</Text>
+            <Text style={styles.headerTitle}>{t('milk.title')}</Text>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={openModal}>
             <Ionicons name="add" size={26} color="#0891b2" />
@@ -310,17 +313,17 @@ const MilkProduction = () => {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{todayTotal.toFixed(1)}L</Text>
-            <Text style={styles.statLabel}>Today</Text>
+            <Text style={styles.statLabel}>{t('milk.today')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{weekTotal.toFixed(1)}L</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={styles.statLabel}>{t('milk.thisWeek')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{records.length}</Text>
-            <Text style={styles.statLabel}>Records</Text>
+            <Text style={styles.statLabel}>{t('milk.records')}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -345,8 +348,8 @@ const MilkProduction = () => {
           <View style={styles.emptyIconContainer}>
             <Ionicons name="water-outline" size={48} color="#06b6d4" />
           </View>
-          <Text style={styles.emptyStateTitle}>No Production Records</Text>
-          <Text style={styles.emptyStateText}>Start tracking your daily milk production</Text>
+          <Text style={styles.emptyStateTitle}>{t('milk.noRecords')}</Text>
+          <Text style={styles.emptyStateText}>{t('milk.startTracking')}</Text>
           <TouchableOpacity style={styles.emptyStateButton} onPress={openModal} activeOpacity={0.8}>
             <LinearGradient
               colors={['#06b6d4', '#0891b2']}
@@ -355,7 +358,7 @@ const MilkProduction = () => {
               style={styles.emptyButtonGradient}
             >
               <Ionicons name="add" size={20} color="white" />
-              <Text style={styles.emptyStateButtonText}>Add First Record</Text>
+              <Text style={styles.emptyStateButtonText}>{t('milk.addFirstRecord')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -366,7 +369,7 @@ const MilkProduction = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingId ? 'Edit' : 'Add'} Milk Production</Text>
+              <Text style={styles.modalTitle}>{editingId ? t('milk.editRecord') : t('milk.addRecord')}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -375,19 +378,19 @@ const MilkProduction = () => {
             <ScrollView style={styles.modalBody}>
               {/* Mode Selector */}
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Record Mode</Text>
+                <Text style={styles.formLabel}>{t('milk.recordMode')}</Text>
                 <View style={styles.modeSelector}>
                   <TouchableOpacity
                     style={[styles.modeOption, mode === 'total-day' && styles.modeOptionActive]}
                     onPress={() => setMode('total-day')}
                   >
-                    <Text style={[styles.modeText, mode === 'total-day' && styles.modeTextActive]}>Total For Day</Text>
+                    <Text style={[styles.modeText, mode === 'total-day' && styles.modeTextActive]}>{t('milk.totalForDay')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modeOption, mode === 'per-animal' && styles.modeOptionActive]}
                     onPress={() => setMode('per-animal')}
                   >
-                    <Text style={[styles.modeText, mode === 'per-animal' && styles.modeTextActive]}>Per Animal</Text>
+                    <Text style={[styles.modeText, mode === 'per-animal' && styles.modeTextActive]}>{t('milk.perAnimal')}</Text>
                   </TouchableOpacity>
                   
                 </View>
@@ -396,14 +399,14 @@ const MilkProduction = () => {
               {mode === 'per-animal' ? (
                 <>
                   <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Animal *</Text>
+                    <Text style={styles.formLabel}>{t('milk.animal')} *</Text>
                     <View style={styles.pickerContainer}>
                       <Picker
                         selectedValue={formData.animalId}
                         onValueChange={(value) => setFormData({ ...formData, animalId: value })}
                         style={styles.picker}
                       >
-                        <Picker.Item label="Select Animal" value="" />
+                        <Picker.Item label={t('milk.selectAnimal')} value="" />
                         {animals.map(animal => (
                           <Picker.Item 
                             key={animal._id} 
@@ -417,7 +420,7 @@ const MilkProduction = () => {
 
                   <View style={styles.formGroup}>
                     <DatePickerInput
-                      label="Date"
+                      label={t('common.date')}
                       value={formData.date}
                       onChange={(date) => setFormData({ ...formData, date })}
                       themeColor="#06b6d4"
@@ -427,7 +430,7 @@ const MilkProduction = () => {
 
                   <View style={styles.formRow}>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>🌅 Morning (L) *</Text>
+                      <Text style={styles.formLabel}>{t('milk.morning')} (L) *</Text>
                       <TextInput
                         style={styles.formInput}
                         value={formData.morningYield}
@@ -438,7 +441,7 @@ const MilkProduction = () => {
                       />
                     </View>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>🌆 Evening (L) *</Text>
+                      <Text style={styles.formLabel}>{t('milk.evening')} (L) *</Text>
                       <TextInput
                         style={styles.formInput}
                         value={formData.eveningYield}
@@ -454,7 +457,7 @@ const MilkProduction = () => {
                 <>
                   <View style={styles.formGroup}>
                     <DatePickerInput
-                      label="Date"
+                      label={t('common.date')}
                       value={totalData.date}
                       onChange={(date) => setTotalData({ ...totalData, date })}
                       themeColor="#06b6d4"
@@ -464,7 +467,7 @@ const MilkProduction = () => {
 
                   <View style={styles.formRow}>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>🌅 Total Morning (L)</Text>
+                      <Text style={styles.formLabel}>{t('milk.totalMorning')} (L)</Text>
                       <TextInput
                         style={styles.formInput}
                         value={totalData.morningTotal}
@@ -475,7 +478,7 @@ const MilkProduction = () => {
                       />
                     </View>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>🌆 Total Evening (L)</Text>
+                      <Text style={styles.formLabel}>{t('milk.totalEvening')} (L)</Text>
                       <TextInput
                         style={styles.formInput}
                         value={totalData.eveningTotal}
@@ -488,13 +491,13 @@ const MilkProduction = () => {
                   </View>
 
                   <View style={styles.previewCard}>
-                    <Text style={styles.previewTitle}>Preview (per animal)</Text>
-                    <Text style={styles.previewText}>Animals: {animals.length}</Text>
+                    <Text style={styles.previewTitle}>{t('milk.preview')}</Text>
+                    <Text style={styles.previewText}>{t('milk.previewAnimals', { count: animals.length })}</Text>
                     <Text style={styles.previewText}>
-                      Morning: {(Number(totalData.morningTotal || 0) / (animals.length || 1)).toFixed(2)} L / animal
+                      {t('milk.previewMorningPerAnimal', { amount: (Number(totalData.morningTotal || 0) / (animals.length || 1)).toFixed(2) })}
                     </Text>
                     <Text style={styles.previewText}>
-                      Evening: {(Number(totalData.eveningTotal || 0) / (animals.length || 1)).toFixed(2)} L / animal
+                      {t('milk.previewEveningPerAnimal', { amount: (Number(totalData.eveningTotal || 0) / (animals.length || 1)).toFixed(2) })}
                     </Text>
                   </View>
                 </>
@@ -854,7 +857,6 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
-    maxHeight: 450,
   },
   formGroup: {
     marginBottom: 18,
