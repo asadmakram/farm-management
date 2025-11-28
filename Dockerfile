@@ -8,13 +8,13 @@ COPY client/package*.json ./client/
 
 # Install dependencies
 RUN npm install
-# Install client dependencies with legacy peer deps to avoid react-scripts/typescript conflict
-RUN cd client && npm install --legacy-peer-deps
+# Install client dependencies
+RUN cd client && npm install
 
 # Copy source code
 COPY . .
 
-# Build React app
+# Build React app with Vite
 RUN cd client && npm run build
 
 # Expose port

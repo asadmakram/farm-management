@@ -256,7 +256,6 @@ const Currencies = () => {
                       onChange={e => setFormData({...formData, exchangeRate: e.target.value})}
                       placeholder="83.50"
                       min="0"
-                      step="0.01"
                       required
                     />
                     <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
