@@ -4,27 +4,27 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Context
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext.jsx';
 
 // Components
-import Sidebar from './components/Sidebar';
-import PrivateRoute from './components/PrivateRoute';
+import Sidebar from './components/Sidebar.jsx';
+import PrivateRoute from './components/PrivateRoute.jsx';
 
 // Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Animals from './pages/Animals';
-import MilkProduction from './pages/MilkProduction';
-import MilkSales from './pages/MilkSales';
-import Expenses from './pages/Expenses';
-import Vaccinations from './pages/Vaccinations';
-import Calves from './pages/Calves';
-import Reports from './pages/Reports';
-import Contracts from './pages/Contracts';
-import RecurringExpenses from './pages/RecurringExpenses';
-import Currencies from './pages/Currencies';
-import Settings from './pages/Settings';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Animals from './pages/Animals.jsx';
+import MilkProduction from './pages/MilkProduction.jsx';
+import MilkSales from './pages/MilkSales.jsx';
+import Expenses from './pages/Expenses.jsx';
+import Vaccinations from './pages/Vaccinations.jsx';
+import Calves from './pages/Calves.jsx';
+import Reports from './pages/Reports.jsx';
+import Contracts from './pages/Contracts.jsx';
+import RecurringExpenses from './pages/RecurringExpenses.jsx';
+import Currencies from './pages/Currencies.jsx';
+import Settings from './pages/Settings.jsx';
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
