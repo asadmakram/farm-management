@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions, TouchableOpacity, RefreshControl, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 2;
+
+// Month names
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+// Generate year options (last 5 years)
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 const Dashboard = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -15,15 +26,20 @@ const Dashboard = ({ navigation }) => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [filterInfo, setFilterInfo] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [filterMonth, filterYear]);
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/dashboard');
+      const response = await api.get(`/dashboard?month=${filterMonth}&year=${filterYear}`);
       setDashboardData(response.data.dashboard || {});
+      setFilterInfo(response.data.filter);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -146,16 +162,22 @@ const Dashboard = ({ navigation }) => {
             <Text style={styles.headerGreeting}>{t('common.welcome')} 👋</Text>
             <Text style={styles.headerTitle}>{t('dashboard.title')}</Text>
           </View>
-          <TouchableOpacity style={styles.notificationBtn}>
-            <Ionicons name="notifications-outline" size={24} color="white" />
-            {dashboardData.alerts?.upcomingVaccinations?.length > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {dashboardData.alerts.upcomingVaccinations.length}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilterModal(true)}>
+              <Ionicons name="calendar-outline" size={20} color="white" />
+              <Text style={styles.filterBtnText}>{months[filterMonth]?.slice(0, 3)} {filterYear}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="white" />
+              {dashboardData.alerts?.upcomingVaccinations?.length > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {dashboardData.alerts.upcomingVaccinations.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.todaySummary}>
           <View style={styles.summaryItem}>
@@ -273,6 +295,16 @@ const Dashboard = ({ navigation }) => {
                   <Text style={styles.salesRevenue}>
                     Rs {Number(customerData.revenue || 0).toLocaleString()}
                   </Text>
+                  <View style={styles.receivedPendingRow}>
+                    <Text style={styles.receivedAmount}>
+                      ✓ {Number(customerData.received || 0).toLocaleString()}
+                    </Text>
+                    {(customerData.pending || 0) > 0 && (
+                      <Text style={styles.pendingAmount}>
+                        | ⏳ {Number(customerData.pending || 0).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               </View>
             );
@@ -419,6 +451,59 @@ const Dashboard = ({ navigation }) => {
       </View>
 
       <View style={styles.bottomPadding} />
+
+      {/* Filter Modal */}
+      <Modal visible={showFilterModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📅 Select Month & Year</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.filterPickerRow}>
+              <View style={styles.filterPickerContainer}>
+                <Text style={styles.filterPickerLabel}>Month</Text>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={filterMonth}
+                    onValueChange={(value) => setFilterMonth(value)}
+                    style={styles.filterPicker}
+                  >
+                    {months.map((month, index) => (
+                      <Picker.Item key={index} label={month} value={index} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              
+              <View style={styles.filterPickerContainer}>
+                <Text style={styles.filterPickerLabel}>Year</Text>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={filterYear}
+                    onValueChange={(value) => setFilterYear(value)}
+                    style={styles.filterPicker}
+                  >
+                    {years.map(year => (
+                      <Picker.Item key={year} label={year.toString()} value={year} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.applyFilterButton} 
+              onPress={() => setShowFilterModal(false)}
+            >
+              <Text style={styles.applyFilterButtonText}>Apply Filter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -489,6 +574,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+  },
+  filterBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
   headerGreeting: {
     fontSize: 14,
@@ -748,6 +852,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#16a34a',
   },
+  receivedPendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  receivedAmount: {
+    fontSize: 11,
+    color: '#10b981',
+    fontWeight: '500',
+  },
+  pendingAmount: {
+    fontSize: 11,
+    color: '#f59e0b',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
   alertItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -843,6 +963,63 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  filterPickerRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 20,
+  },
+  filterPickerContainer: {
+    flex: 1,
+  },
+  filterPickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
+  },
+  filterPicker: {
+    height: 50,
+  },
+  applyFilterButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyFilterButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

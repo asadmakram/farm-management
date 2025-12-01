@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { FaTint, FaMoneyBillWave, FaChartLine } from 'react-icons/fa';
+import { FaTint, FaMoneyBillWave, FaChartLine, FaCalendarAlt } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import api from '../utils/api';
 import './Dashboard.css';
@@ -10,15 +10,30 @@ const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const [filterInfo, setFilterInfo] = useState(null);
+
+  // Generate month options
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  // Generate year options (last 5 years)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [filterMonth, filterYear]);
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/dashboard');
+      setLoading(true);
+      const response = await api.get(`/dashboard?month=${filterMonth}&year=${filterYear}`);
       setDashboardData(response.data.dashboard);
+      setFilterInfo(response.data.filter);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -52,6 +67,15 @@ const Dashboard = () => {
     revenue: sales.salesByType[type].revenue
   }));
 
+  // Prepare sales by customer data including received amounts
+  const customerSalesData = Object.keys(sales.salesByCustomer || {}).map(customer => ({
+    name: customer,
+    revenue: sales.salesByCustomer[customer].revenue,
+    received: sales.salesByCustomer[customer].received || 0,
+    pending: sales.salesByCustomer[customer].pending || 0,
+    quantity: sales.salesByCustomer[customer].quantity
+  }));
+
   const weeklyData = milk.weeklyTrend?.map(item => ({
     date: item._id,
     yield: item.totalYield
@@ -59,7 +83,34 @@ const Dashboard = () => {
 
   return (
     <div className="container mt-3">
-      <h1 className="page-title">Dashboard</h1>
+      <div className="flex-between mb-3">
+        <h1 className="page-title">Dashboard</h1>
+        
+        {/* Month/Year Filter */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <FaCalendarAlt color="#6b7280" />
+          <select 
+            className="form-select" 
+            value={filterMonth} 
+            onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+            style={{ minWidth: '120px' }}
+          >
+            {months.map((month, index) => (
+              <option key={index} value={index}>{month}</option>
+            ))}
+          </select>
+          <select 
+            className="form-select" 
+            value={filterYear} 
+            onChange={(e) => setFilterYear(parseInt(e.target.value))}
+            style={{ minWidth: '90px' }}
+          >
+            {years.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-4">
@@ -197,6 +248,41 @@ const Dashboard = () => {
             <p className="text-center">No sales recorded</p>
           )}
         </div>
+      </div>
+
+      {/* Sales by Customer with Received Amount */}
+      <div className="card mb-3">
+        <h3 className="card-title">Sales per Customer ({filterInfo?.monthName || months[filterMonth]} {filterYear})</h3>
+        {customerSalesData.length > 0 ? (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th className="text-left">Customer</th>
+                  <th className="text-right">Quantity (L)</th>
+                  <th className="text-right">Total Revenue</th>
+                  <th className="text-right">Received</th>
+                  <th className="text-right">Pending</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customerSalesData.map((customer, index) => (
+                  <tr key={index}>
+                    <td className="text-left">{customer.name}</td>
+                    <td className="text-right">{customer.quantity.toFixed(1)} L</td>
+                    <td className="text-right">₹{customer.revenue.toFixed(2)}</td>
+                    <td className="text-right" style={{ color: 'var(--success-color)' }}>₹{customer.received.toFixed(2)}</td>
+                    <td className="text-right" style={{ color: customer.pending > 0 ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
+                      ₹{customer.pending.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-center">No customer sales data available</p>
+        )}
       </div>
 
       {/* Alerts and Recent Activity */}

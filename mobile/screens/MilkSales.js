@@ -58,6 +58,7 @@ const MilkSales = () => {
     date: new Date().toISOString().split('T')[0]
   });
   const [uniqueCustomers, setUniqueCustomers] = useState([]);
+  const [paymentPreview, setPaymentPreview] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -232,6 +233,75 @@ const MilkSales = () => {
       .reduce((sum, sale) => sum + (sale.amountPending || sale.totalAmount), 0);
   };
 
+  // Calculate payment preview when amount or customer changes
+  const calculatePaymentPreview = (customerName, amount) => {
+    if (!customerName || !amount || Number(amount) <= 0) {
+      setPaymentPreview([]);
+      return;
+    }
+
+    const pendingSales = sales
+      .filter(sale => 
+        (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
+        (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
+      )
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let remainingAmount = Number(amount);
+    const preview = [];
+
+    for (const sale of pendingSales) {
+      if (remainingAmount <= 0) break;
+
+      const pendingForSale = sale.amountPending || sale.totalAmount;
+      const amountToApply = Math.min(remainingAmount, pendingForSale);
+      const remainingPending = pendingForSale - amountToApply;
+      
+      let newStatus = 'pending';
+      if (amountToApply >= pendingForSale) {
+        newStatus = 'received';
+      } else if (amountToApply > 0) {
+        newStatus = 'partial';
+      }
+
+      preview.push({
+        _id: sale._id,
+        date: sale.date,
+        totalAmount: sale.totalAmount,
+        previouslyPaid: sale.amountPaid || 0,
+        currentPending: pendingForSale,
+        amountToApply,
+        remainingPending,
+        newStatus
+      });
+
+      remainingAmount -= amountToApply;
+    }
+
+    // If there's remaining amount after all sales
+    if (remainingAmount > 0) {
+      preview.push({
+        _id: 'excess',
+        isExcess: true,
+        excessAmount: remainingAmount
+      });
+    }
+
+    setPaymentPreview(preview);
+  };
+
+  const handleBulkPaymentChange = (field, value) => {
+    const newData = { ...bulkPaymentData, [field]: value };
+    setBulkPaymentData(newData);
+    
+    if (field === 'customerName' || field === 'amount') {
+      calculatePaymentPreview(
+        field === 'customerName' ? value : bulkPaymentData.customerName,
+        field === 'amount' ? value : bulkPaymentData.amount
+      );
+    }
+  };
+
   const handleBulkPayment = async () => {
     if (!bulkPaymentData.customerName || !bulkPaymentData.amount) {
       Alert.alert(t('common.error'), 'Please fill customer name and amount');
@@ -268,6 +338,7 @@ const MilkSales = () => {
         paymentMethod: 'cash',
         date: new Date().toISOString().split('T')[0]
       });
+      setPaymentPreview([]);
       fetchData();
     } catch (error) {
       Alert.alert(t('common.error'), error.response?.data?.message || 'Error allocating payment');
@@ -739,7 +810,10 @@ const MilkSales = () => {
           <View style={styles.paymentModalContent}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>💰 Receive Payment from Customer</Text>
-              <TouchableOpacity onPress={() => setShowBulkPaymentModal(false)}>
+              <TouchableOpacity onPress={() => {
+                setShowBulkPaymentModal(false);
+                setPaymentPreview([]);
+              }}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -750,7 +824,7 @@ const MilkSales = () => {
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={bulkPaymentData.customerName}
-                    onValueChange={(value) => setBulkPaymentData({ ...bulkPaymentData, customerName: value })}
+                    onValueChange={(value) => handleBulkPaymentChange('customerName', value)}
                     style={styles.picker}
                   >
                     <Picker.Item label="Select a customer" value="" />
@@ -781,12 +855,57 @@ const MilkSales = () => {
                 <TextInput
                   style={styles.formInput}
                   value={bulkPaymentData.amount}
-                  onChangeText={(text) => setBulkPaymentData({ ...bulkPaymentData, amount: text })}
+                  onChangeText={(text) => handleBulkPaymentChange('amount', text)}
                   placeholder="Enter amount"
                   placeholderTextColor="#94a3b8"
                   keyboardType="decimal-pad"
                 />
               </View>
+
+              {/* Payment Preview */}
+              {paymentPreview.length > 0 && (
+                <View style={styles.previewContainer}>
+                  <Text style={styles.previewTitle}>📊 Payment Allocation Preview</Text>
+                  {paymentPreview.filter(p => !p.isExcess).map(preview => (
+                    <View key={preview._id} style={styles.previewItem}>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewDate}>{new Date(preview.date).toLocaleDateString()}</Text>
+                        <View style={[styles.previewStatusBadge, { backgroundColor: preview.newStatus === 'received' ? '#d1fae5' : '#fef3c7' }]}>
+                          <Text style={[styles.previewStatusText, { color: preview.newStatus === 'received' ? '#10b981' : '#f59e0b' }]}>
+                            {preview.newStatus === 'received' ? '✅ Paid' : '⏳ Partial'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.previewAmounts}>
+                        <View style={styles.previewAmountItem}>
+                          <Text style={styles.previewAmountLabel}>Pending</Text>
+                          <Text style={[styles.previewAmountValue, { color: '#ef4444' }]}>Rs {preview.currentPending.toFixed(0)}</Text>
+                        </View>
+                        <Text style={styles.previewArrow}>→</Text>
+                        <View style={styles.previewAmountItem}>
+                          <Text style={styles.previewAmountLabel}>Applied</Text>
+                          <Text style={[styles.previewAmountValue, { color: '#10b981' }]}>Rs {preview.amountToApply.toFixed(0)}</Text>
+                        </View>
+                        <Text style={styles.previewArrow}>→</Text>
+                        <View style={styles.previewAmountItem}>
+                          <Text style={styles.previewAmountLabel}>Remaining</Text>
+                          <Text style={[styles.previewAmountValue, { color: preview.remainingPending > 0 ? '#f59e0b' : '#6b7280' }]}>
+                            Rs {preview.remainingPending.toFixed(0)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                  
+                  {paymentPreview.find(p => p.isExcess) && (
+                    <View style={styles.excessAmountCard}>
+                      <Text style={styles.excessAmountTitle}>💡 Excess Amount</Text>
+                      <Text style={styles.excessAmountValue}>Rs {paymentPreview.find(p => p.isExcess).excessAmount.toFixed(2)}</Text>
+                      <Text style={styles.excessAmountSubtext}>This exceeds all pending sales</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.formGroup}>
                 <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>Payment Method</Text>
@@ -823,7 +942,10 @@ const MilkSales = () => {
             </ScrollView>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowBulkPaymentModal(false)}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => {
+                setShowBulkPaymentModal(false);
+                setPaymentPreview([]);
+              }}>
                 <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -944,6 +1066,96 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#065f46',
     marginBottom: 4,
+  },
+  previewContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  previewItem: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewDate: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  previewStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  previewStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  previewAmounts: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  previewAmountItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  previewAmountLabel: {
+    fontSize: 9,
+    color: '#94a3b8',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  previewAmountValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  previewArrow: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginHorizontal: 4,
+  },
+  excessAmountCard: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+  },
+  excessAmountTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1d4ed8',
+    marginBottom: 4,
+  },
+  excessAmountValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1d4ed8',
+    marginBottom: 4,
+  },
+  excessAmountSubtext: {
+    fontSize: 11,
+    color: '#1e40af',
   },
   summaryScroll: {
     paddingVertical: 4,

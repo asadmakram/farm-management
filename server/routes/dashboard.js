@@ -15,15 +15,19 @@ router.get('/', auth, async (req, res) => {
   try {
     const userId = req.user._id;
     
-    // Get date ranges
+    // Get month/year filter from query params (default to current month)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    const filterMonth = req.query.month ? parseInt(req.query.month) : today.getMonth();
+    const filterYear = req.query.year ? parseInt(req.query.year) : today.getFullYear();
     
-    const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0, 23, 59, 59);
+    // Get date ranges based on filter
+    const startOfMonth = new Date(filterYear, filterMonth, 1);
+    const endOfMonth = new Date(filterYear, filterMonth + 1, 0, 23, 59, 59);
+    
+    const startOfLastMonth = new Date(filterYear, filterMonth - 1, 1);
+    const endOfLastMonth = new Date(filterYear, filterMonth, 0, 23, 59, 59);
 
     // Get animal statistics
     const totalAnimals = await Animal.countDocuments({ userId, status: 'active' });
@@ -179,12 +183,16 @@ router.get('/', auth, async (req, res) => {
         salesByCustomer[customerKey] = {
           quantity: 0,
           revenue: 0,
+          received: 0,
+          pending: 0,
           count: 0,
           saleType: sale.saleType
         };
       }
       salesByCustomer[customerKey].quantity += sale.quantity;
       salesByCustomer[customerKey].revenue += sale.totalAmount;
+      salesByCustomer[customerKey].received += sale.amountPaid || 0;
+      salesByCustomer[customerKey].pending += sale.amountPending || (sale.totalAmount - (sale.amountPaid || 0));
       salesByCustomer[customerKey].count += 1;
     }
 
@@ -205,6 +213,11 @@ router.get('/', auth, async (req, res) => {
 
     res.json({
       success: true,
+      filter: {
+        month: filterMonth,
+        year: filterYear,
+        monthName: new Date(filterYear, filterMonth, 1).toLocaleString('default', { month: 'long' })
+      },
       dashboard: {
         animals: {
           total: totalAnimals,

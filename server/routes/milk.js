@@ -394,24 +394,72 @@ router.post(
 
       const { customerName, amount, paymentMethod, date } = req.body;
 
+      // Escape special regex characters in customer name
+      const escapedName = customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
       // Find all pending/partial sales for this customer, sorted by date (FIFO)
-      const pendingSales = await MilkSale.find({
+      // First, find by direct customerName match (case insensitive, trim whitespace)
+      let pendingSales = await MilkSale.find({
         userId: req.user._id,
-        customerName: { $regex: new RegExp(`^${customerName}$`, 'i') }, // Case insensitive match
+        customerName: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
         paymentStatus: { $in: ['pending', 'partial'] }
       }).sort({ date: 1 });
 
-      if (pendingSales.length === 0) {
-        return res.status(404).json({ success: false, message: 'No pending sales found for this customer' });
+      // Also find bandhi sales where contract vendor name matches
+      const Contract = require('../models/Contract');
+      const matchingContracts = await Contract.find({
+        userId: req.user._id,
+        vendorName: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') }
+      });
+
+      if (matchingContracts.length > 0) {
+        const contractIds = matchingContracts.map(c => c._id);
+        const bandhiSales = await MilkSale.find({
+          userId: req.user._id,
+          contractId: { $in: contractIds },
+          paymentStatus: { $in: ['pending', 'partial'] }
+        }).sort({ date: 1 });
+        
+        // Merge and remove duplicates (by _id), then sort by date
+        const existingIds = new Set(pendingSales.map(s => s._id.toString()));
+        for (const sale of bandhiSales) {
+          if (!existingIds.has(sale._id.toString())) {
+            pendingSales.push(sale);
+          }
+        }
+        pendingSales.sort((a, b) => new Date(a.date) - new Date(b.date));
       }
 
-      let remainingAmount = amount;
+      if (pendingSales.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'No pending sales found for this customer',
+          debug: {
+            customerSearched: customerName,
+            contractsFound: matchingContracts.length
+          }
+        });
+      }
+
+      let remainingAmount = Number(amount);
       const updatedSales = [];
 
       for (const sale of pendingSales) {
         if (remainingAmount <= 0) break;
 
-        const amountToPay = Math.min(remainingAmount, sale.amountPending);
+        // Calculate pending amount manually in case it's not set
+        const totalPaid = sale.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        const pendingAmount = Math.max(0, Number(sale.totalAmount) - totalPaid);
+        
+        if (pendingAmount <= 0) continue; // Skip if already paid
+        
+        const amountToPay = Math.min(remainingAmount, pendingAmount);
+        
+        // Ensure amountToPay is a valid number
+        if (isNaN(amountToPay) || amountToPay <= 0) {
+          console.warn(`Invalid amountToPay for sale ${sale._id}: ${amountToPay}`);
+          continue;
+        }
         
         sale.payments.push({
           amount: amountToPay,

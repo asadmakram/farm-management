@@ -16,6 +16,7 @@ const MilkSales = () => {
     date: new Date().toISOString().split('T')[0]
   });
   const [uniqueCustomers, setUniqueCustomers] = useState([]);
+  const [paymentPreview, setPaymentPreview] = useState([]);
   const defaultSummary = {
     totalQuantity: 0,
     totalRevenue: 0,
@@ -157,6 +158,7 @@ const MilkSales = () => {
         paymentMethod: 'cash',
         date: new Date().toISOString().split('T')[0]
       });
+      setPaymentPreview([]);
       fetchSales();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error allocating payment');
@@ -171,6 +173,75 @@ const MilkSales = () => {
         (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
       )
       .reduce((sum, sale) => sum + (sale.amountPending || sale.totalAmount), 0);
+  };
+
+  // Calculate payment preview when amount or customer changes
+  const calculatePaymentPreview = (customerName, amount) => {
+    if (!customerName || !amount || Number(amount) <= 0) {
+      setPaymentPreview([]);
+      return;
+    }
+
+    const pendingSales = sales
+      .filter(sale => 
+        (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
+        (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
+      )
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let remainingAmount = Number(amount);
+    const preview = [];
+
+    for (const sale of pendingSales) {
+      if (remainingAmount <= 0) break;
+
+      const pendingForSale = sale.amountPending || sale.totalAmount;
+      const amountToApply = Math.min(remainingAmount, pendingForSale);
+      const remainingPending = pendingForSale - amountToApply;
+      
+      let newStatus = 'pending';
+      if (amountToApply >= pendingForSale) {
+        newStatus = 'received';
+      } else if (amountToApply > 0) {
+        newStatus = 'partial';
+      }
+
+      preview.push({
+        _id: sale._id,
+        date: sale.date,
+        totalAmount: sale.totalAmount,
+        previouslyPaid: sale.amountPaid || 0,
+        currentPending: pendingForSale,
+        amountToApply,
+        remainingPending,
+        newStatus
+      });
+
+      remainingAmount -= amountToApply;
+    }
+
+    // If there's remaining amount after all sales
+    if (remainingAmount > 0) {
+      preview.push({
+        _id: 'excess',
+        isExcess: true,
+        excessAmount: remainingAmount
+      });
+    }
+
+    setPaymentPreview(preview);
+  };
+
+  const handlePaymentAllocationChange = (field, value) => {
+    const newData = { ...paymentAllocationData, [field]: value };
+    setPaymentAllocationData(newData);
+    
+    if (field === 'customerName' || field === 'amount') {
+      calculatePaymentPreview(
+        field === 'customerName' ? value : paymentAllocationData.customerName,
+        field === 'amount' ? value : paymentAllocationData.amount
+      );
+    }
   };
 
   const resetForm = () => {
@@ -658,7 +729,7 @@ const MilkSales = () => {
       {/* Payment Allocation Modal */}
       {showPaymentAllocationModal && (
         <div className="modal-overlay" onClick={() => setShowPaymentAllocationModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h2>💰 Receive Payment from Customer</h2>
               <button className="modal-close" onClick={() => setShowPaymentAllocationModal(false)}>&times;</button>
@@ -674,7 +745,7 @@ const MilkSales = () => {
                   <select
                     className="form-select"
                     value={paymentAllocationData.customerName}
-                    onChange={e => setPaymentAllocationData({...paymentAllocationData, customerName: e.target.value})}
+                    onChange={e => handlePaymentAllocationChange('customerName', e.target.value)}
                     required
                   >
                     <option value="">Select a customer</option>
@@ -718,7 +789,7 @@ const MilkSales = () => {
                       step="0.01"
                       className="form-input"
                       value={paymentAllocationData.amount}
-                      onChange={e => setPaymentAllocationData({...paymentAllocationData, amount: e.target.value})}
+                      onChange={e => handlePaymentAllocationChange('amount', e.target.value)}
                       placeholder="Enter amount"
                       required
                     />
@@ -747,6 +818,60 @@ const MilkSales = () => {
                   />
                 </div>
               </div>
+
+              {/* Payment Allocation Preview */}
+              {paymentPreview.length > 0 && (
+                <div className="form-section">
+                  <div className="form-section-title">
+                    <span>📊</span>
+                    <span>Payment Allocation Preview</span>
+                  </div>
+                  <div className="table-container" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    <table style={{ fontSize: '0.875rem' }}>
+                      <thead>
+                        <tr>
+                          <th className="text-left">Sale Date</th>
+                          <th className="text-right">Total</th>
+                          <th className="text-right">Pending</th>
+                          <th className="text-right">Applied</th>
+                          <th className="text-right">Remaining</th>
+                          <th className="text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentPreview.filter(p => !p.isExcess).map(preview => (
+                          <tr key={preview._id}>
+                            <td className="text-left">{new Date(preview.date).toLocaleDateString()}</td>
+                            <td className="text-right">₹{preview.totalAmount.toFixed(0)}</td>
+                            <td className="text-right" style={{ color: 'var(--danger-color)' }}>₹{preview.currentPending.toFixed(0)}</td>
+                            <td className="text-right" style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>₹{preview.amountToApply.toFixed(0)}</td>
+                            <td className="text-right" style={{ color: preview.remainingPending > 0 ? 'var(--warning-color)' : 'var(--text-secondary)' }}>
+                              ₹{preview.remainingPending.toFixed(0)}
+                            </td>
+                            <td className="text-center">
+                              <span className={`status-badge ${preview.newStatus}`} style={{ fontSize: '0.75rem' }}>
+                                {preview.newStatus === 'received' ? '✅ Paid' : preview.newStatus === 'partial' ? '⏳ Partial' : '❌ Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {paymentPreview.find(p => p.isExcess) && (
+                    <div className="info-box" style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)', border: '1px solid #3b82f6', borderRadius: '0.5rem', padding: '0.75rem', marginTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#1d4ed8' }}>
+                        <span>💡</span>
+                        <span>Excess Amount: ₹{paymentPreview.find(p => p.isExcess).excessAmount.toFixed(2)}</span>
+                      </div>
+                      <small style={{ color: '#1e40af', fontSize: '0.75rem' }}>
+                        This amount exceeds all pending sales and will be credited in advance.
+                      </small>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="info-box" style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%)', border: '1px solid #10b981', borderRadius: '0.5rem', padding: '1rem', margin: '1rem 0' }}>
                 <div style={{ fontWeight: '600', color: '#047857', marginBottom: '0.5rem' }}>
