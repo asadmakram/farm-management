@@ -254,4 +254,153 @@ router.get('/animal-performance', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/reports/customer-sales-history
+// @desc    Get customer sales history report with daily breakdown
+// @access  Private
+router.get('/customer-sales-history', auth, async (req, res) => {
+  try {
+    const { customerName, startDate, endDate } = req.query;
+    
+    if (!customerName) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Customer name is required' 
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Start date and end date are required' 
+      });
+    }
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Escape special regex characters
+    const escapedName = customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Find direct sales by customer name
+    let sales = await MilkSale.find({
+      userId: req.user._id,
+      customerName: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
+      date: { $gte: start, $lte: end }
+    }).sort({ date: 1 });
+
+    // Also find bandhi sales where contract vendor name matches
+    const Contract = require('../models/Contract');
+    const matchingContracts = await Contract.find({
+      userId: req.user._id,
+      vendorName: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') }
+    });
+
+    if (matchingContracts.length > 0) {
+      const contractIds = matchingContracts.map(c => c._id);
+      const bandhiSales = await MilkSale.find({
+        userId: req.user._id,
+        contractId: { $in: contractIds },
+        date: { $gte: start, $lte: end }
+      }).sort({ date: 1 });
+      
+      // Merge and remove duplicates
+      const existingIds = new Set(sales.map(s => s._id.toString()));
+      for (const sale of bandhiSales) {
+        if (!existingIds.has(sale._id.toString())) {
+          sales.push(sale);
+        }
+      }
+      sales.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+
+    if (sales.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No sales found for this customer in the selected period' 
+      });
+    }
+
+    // Group by date and time of day
+    const salesByDate = {};
+    sales.forEach(sale => {
+      const dateKey = new Date(sale.date).toISOString().split('T')[0];
+      if (!salesByDate[dateKey]) {
+        salesByDate[dateKey] = {
+          date: dateKey,
+          morning: { quantity: 0, amount: 0, rate: 0, count: 0 },
+          evening: { quantity: 0, amount: 0, rate: 0, count: 0 },
+          allDay: { quantity: 0, amount: 0, rate: 0, count: 0 },
+          totalQuantity: 0,
+          totalAmount: 0,
+          amountPaid: 0,
+          amountPending: 0,
+          sales: []
+        };
+      }
+
+      const dateData = salesByDate[dateKey];
+      const timeOfDay = sale.timeOfDay || 'allDay';
+      
+      if (timeOfDay === 'morning' || timeOfDay === 'evening') {
+        dateData[timeOfDay].quantity += sale.quantity;
+        dateData[timeOfDay].amount += sale.totalAmount;
+        dateData[timeOfDay].rate = sale.ratePerLiter;
+        dateData[timeOfDay].count += 1;
+      } else {
+        dateData.allDay.quantity += sale.quantity;
+        dateData.allDay.amount += sale.totalAmount;
+        dateData.allDay.rate = sale.ratePerLiter;
+        dateData.allDay.count += 1;
+      }
+
+      dateData.totalQuantity += sale.quantity;
+      dateData.totalAmount += sale.totalAmount;
+      dateData.amountPaid += sale.amountPaid || 0;
+      dateData.amountPending += sale.amountPending || (sale.totalAmount - (sale.amountPaid || 0));
+      dateData.sales.push({
+        _id: sale._id,
+        timeOfDay: sale.timeOfDay,
+        quantity: sale.quantity,
+        ratePerLiter: sale.ratePerLiter,
+        totalAmount: sale.totalAmount,
+        amountPaid: sale.amountPaid || 0,
+        amountPending: sale.amountPending || (sale.totalAmount - (sale.amountPaid || 0)),
+        paymentStatus: sale.paymentStatus,
+        saleType: sale.saleType
+      });
+    });
+
+    // Calculate summary
+    const totalQuantity = sales.reduce((sum, s) => sum + s.quantity, 0);
+    const totalAmount = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalPaid = sales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+    const totalPending = totalAmount - totalPaid;
+    const averageRate = totalQuantity > 0 ? totalAmount / totalQuantity : 0;
+
+    res.json({
+      success: true,
+      customerName,
+      period: {
+        startDate: start,
+        endDate: end
+      },
+      summary: {
+        totalSales: sales.length,
+        totalQuantity: parseFloat(totalQuantity.toFixed(2)),
+        totalAmount: parseFloat(totalAmount.toFixed(2)),
+        totalPaid: parseFloat(totalPaid.toFixed(2)),
+        totalPending: parseFloat(totalPending.toFixed(2)),
+        averageRate: parseFloat(averageRate.toFixed(2))
+      },
+      salesByDate: Object.values(salesByDate).sort((a, b) => new Date(b.date) - new Date(a.date)),
+      allSales: sales
+    });
+  } catch (error) {
+    console.error('Customer sales history report error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;
