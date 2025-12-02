@@ -28,6 +28,20 @@ const Navbar = () => {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    // Prevent body scroll when mobile menu is open
+    if (isMenuOpen && window.innerWidth < 992) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
   };
@@ -79,131 +93,162 @@ const Navbar = () => {
   }
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom">
-      <div className="container-fluid">
-        <Link to="/" className="navbar-brand d-flex align-items-center text-primary fw-bold">
-          <span className="me-2">🐄</span>
-          Dairy Farm Manager
-        </Link>
+    <>
+      <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm border-bottom">
+        <div className="container-fluid">
+          <Link to="/" className="navbar-brand d-flex align-items-center text-primary fw-bold">
+            <span className="me-2">🐄</span>
+            <span className="d-none d-sm-inline">Dairy Farm Manager</span>
+            <span className="d-inline d-sm-none">DFM</span>
+          </Link>
 
-        <button 
-          className="navbar-toggler border-0"
-          type="button"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-controls="navbarNav"
-          aria-expanded={isMenuOpen}
-          aria-label="Toggle navigation"
-        >
-          {isMenuOpen ? <FaTimes /> : <FaBars />}
-        </button>
+          <button 
+            className="navbar-toggler border-0"
+            type="button"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-controls="navbarNav"
+            aria-expanded={isMenuOpen}
+            aria-label="Toggle navigation"
+          >
+            {isMenuOpen ? <FaTimes /> : <FaBars />}
+          </button>
 
-        <div className={`collapse navbar-collapse d-flex justify-content-start ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
-          {/* Language Selector */}
-          <div className="d-flex align-items-center me-3">
-            <div className="dropdown">
-              <button 
-                className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
-                type="button"
-                id="languageDropdown"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <FaGlobe className="me-2" />
-                {i18n.language === 'ur' ? 'اردو' : 'English'}
-              </button>
-              <ul className="dropdown-menu" aria-labelledby="languageDropdown">
-                <li>
-                  <button className="dropdown-item" onClick={() => changeLanguage('en')}>English</button>
-                </li>
-                <li>
-                  <button className="dropdown-item" onClick={() => changeLanguage('ur')}>اردو</button>
-                </li>
-              </ul>
+          <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
+            {/* Language Selector */}
+            <div className="d-flex align-items-center me-3 mt-3 mt-lg-0">
+              <div className="dropdown w-100">
+                <button 
+                  className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center justify-content-between w-100"
+                  type="button"
+                  id="languageDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <span className="d-flex align-items-center">
+                    <FaGlobe className="me-2" />
+                    {i18n.language === 'ur' ? 'اردو' : 'English'}
+                  </span>
+                </button>
+                <ul className="dropdown-menu w-100" aria-labelledby="languageDropdown">
+                  <li>
+                    <button className="dropdown-item" onClick={() => { changeLanguage('en'); setIsMenuOpen(false); }}>English</button>
+                  </li>
+                  <li>
+                    <button className="dropdown-item" onClick={() => { changeLanguage('ur'); setIsMenuOpen(false); }}>اردو</button>
+                  </li>
+                </ul>
+              </div>
             </div>
-          </div>
 
-          {/* Currency Selector */}
-          <div className="d-flex align-items-center me-3">
-            <div className="dropdown">
-              <button 
-                className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
-                type="button"
-                id="currencyDropdown"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <FaCoins className="me-2" />
-                {currencies.find(c => c.code === preferredCurrency)?.symbol || '₹'} {preferredCurrency}
-              </button>
-              <ul className="dropdown-menu" aria-labelledby="currencyDropdown">
-                {currencies.map(currency => (
-                  <li key={currency.code}>
-                    <button 
-                      className={`dropdown-item d-flex align-items-center ${
-                        currency.code === preferredCurrency ? 'active' : ''
-                      }`}
-                      onClick={() => handleCurrencyChange(currency.code)}
-                    >
-                      <span className="me-2">{currency.symbol}</span>
-                      {currency.name} ({currency.code})
-                      {currency.isDefault && <span className="badge bg-primary ms-2">Default</span>}
+            {/* Currency Selector */}
+            <div className="d-flex align-items-center me-3 mt-2 mt-lg-0">
+              <div className="dropdown w-100">
+                <button 
+                  className="btn btn-outline-secondary dropdown-toggle d-flex align-items-center justify-content-between w-100"
+                  type="button"
+                  id="currencyDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <span className="d-flex align-items-center">
+                    <FaCoins className="me-2" />
+                    {currencies.find(c => c.code === preferredCurrency)?.symbol || '₹'} {preferredCurrency}
+                  </span>
+                </button>
+                <ul className="dropdown-menu w-100" aria-labelledby="currencyDropdown">
+                  {currencies.map(currency => (
+                    <li key={currency.code}>
+                      <button 
+                        className={`dropdown-item d-flex align-items-center ${
+                          currency.code === preferredCurrency ? 'active' : ''
+                        }`}
+                        onClick={() => { handleCurrencyChange(currency.code); setIsMenuOpen(false); }}
+                      >
+                        <span className="me-2">{currency.symbol}</span>
+                        {currency.name} ({currency.code})
+                        {currency.isDefault && <span className="badge bg-primary ms-2">Default</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <ul className="navbar-nav mb-2 mb-lg-0 mt-3 mt-lg-0">
+              {navLinks.map(link => (
+                <li className="nav-item" key={link.path}>
+                  <Link
+                    to={link.path}
+                    className={`nav-link d-flex align-items-center px-3 py-2 mx-1 rounded ${
+                      location.pathname === link.path ? 'active bg-primary text-white' : 'text-muted'
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {link.icon}
+                    <span className="ms-2">{link.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <div className="d-flex align-items-center mt-3 mt-lg-0">
+              {/* User Info */}
+              <div className="dropdown w-100">
+                <button 
+                  className="btn btn-outline-primary dropdown-toggle d-flex align-items-center justify-content-between w-100"
+                  type="button"
+                  id="userDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <span className="d-flex align-items-center">
+                    <FaCog className="me-2" />
+                    <span className="d-none d-md-inline">{user?.farmName}</span>
+                    <span className="d-inline d-md-none">{user?.name}</span>
+                  </span>
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end w-100" aria-labelledby="userDropdown">
+                  <li>
+                    <h6 className="dropdown-header">{user?.name}</h6>
+                  </li>
+                  <li>
+                    <span className="dropdown-item-text small text-muted">{user?.email}</span>
+                  </li>
+                  <li>
+                    <span className="dropdown-item-text small text-muted">{user?.farmName}</span>
+                  </li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <button className="dropdown-item text-danger d-flex align-items-center" onClick={handleLogout}>
+                      <FaSignOutAlt className="me-2" />
+                      Logout
                     </button>
                   </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <ul className="navbar-nav mb-2 mb-lg-0">
-            {navLinks.map(link => (
-              <li className="nav-item" key={link.path}>
-                <Link
-                  to={link.path}
-                  className={`nav-link d-flex align-items-center px-3 py-2 mx-1 rounded ${
-                    location.pathname === link.path ? 'active bg-primary text-white' : 'text-muted'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.icon}
-                  <span className="ms-2">{link.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <div className="d-flex align-items-center">
-            {/* User Info */}
-            <div className="dropdown">
-              <button 
-                className="btn btn-outline-primary dropdown-toggle d-flex align-items-center"
-                type="button"
-                id="userDropdown"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                <FaCog className="me-2" />
-                <span className="d-none d-md-inline">{user?.farmName}</span>
-              </button>
-              <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                <li>
-                  <h6 className="dropdown-header">{user?.name}</h6>
-                </li>
-                <li>
-                  <span className="dropdown-item-text small text-muted">{user?.email}</span>
-                </li>
-                <li><hr className="dropdown-divider" /></li>
-                <li>
-                  <button className="dropdown-item text-danger d-flex align-items-center" onClick={handleLogout}>
-                    <FaSignOutAlt className="me-2" />
-                    Logout
-                  </button>
-                </li>
-              </ul>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      
+      {/* Mobile Menu Backdrop */}
+      {isMenuOpen && (
+        <div 
+          className="mobile-backdrop"
+          onClick={() => setIsMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            display: window.innerWidth < 992 ? 'block' : 'none'
+          }}
+        />
+      )}
+    </>
   );
 };
 
