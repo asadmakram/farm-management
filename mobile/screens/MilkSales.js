@@ -29,6 +29,7 @@ const MilkSales = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [filterType, setFilterType] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('all');
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     saleType: 'bandhi',
@@ -347,9 +348,16 @@ const MilkSales = () => {
     }
   };
 
-  const filteredSales = filterType === 'all'
-    ? (sales || [])
-    : (sales || []).filter(sale => sale.saleType === filterType);
+  const filteredSales = sales.filter(sale => {
+    // Filter by sale type
+    const typeMatch = filterType === 'all' || sale.saleType === filterType;
+    
+    // Filter by customer
+    const customerName = sale.customerName || sale.contractId?.vendorName || '';
+    const customerMatch = customerFilter === 'all' || customerName === customerFilter;
+    
+    return typeMatch && customerMatch;
+  });
 
   const renderSale = ({ item }) => (
     <View style={styles.saleCard}>
@@ -490,6 +498,23 @@ const MilkSales = () => {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {/* Customer Filter */}
+        <View style={styles.customerFilterContainer}>
+          <Text style={styles.customerFilterLabel}>{t('sales.filterByCustomer') || 'Filter by Customer'}</Text>
+          <View style={styles.customerPickerContainer}>
+            <Picker
+              selectedValue={customerFilter}
+              onValueChange={(value) => setCustomerFilter(value)}
+              style={styles.customerPicker}
+            >
+              <Picker.Item label={t('sales.allCustomers') || 'All Customers'} value="all" />
+              {uniqueCustomers.map((customer) => (
+                <Picker.Item key={customer} label={customer} value={customer} />
+              ))}
+            </Picker>
+          </View>
+        </View>
       </View>
 
       {filteredSales.length > 0 ? (
@@ -1231,6 +1256,27 @@ const styles = StyleSheet.create({
   filterTabTextActive: {
     color: 'white',
     fontWeight: '600',
+  },
+  customerFilterContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  customerFilterLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  customerPickerContainer: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
+    overflow: 'hidden',
+  },
+  customerPicker: {
+    height: 46,
+    color: '#1e293b',
   },
   listContent: {
     padding: 12,

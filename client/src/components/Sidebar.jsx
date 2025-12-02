@@ -140,7 +140,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             >
               <div className="d-flex align-items-center">
                 <FaCoins className="me-2" />
-                <span>{currencies.find(c => c.code === preferredCurrency)?.symbol || '₹'} {preferredCurrency}</span>
+                <span>{currencies.find(c => c.code === preferredCurrency)?.symbol || 'Rs '} {preferredCurrency}</span>
               </div>
             </button>
             <ul className="dropdown-menu w-100" aria-labelledby="currencyDropdown">

@@ -15,7 +15,8 @@ const Reports = () => {
     month: new Date().getMonth() + 1,
     startDate: '',
     endDate: '',
-    customerName: ''
+    customerName: '',
+    paymentStatus: 'all'
   });
 
   useEffect(() => {
@@ -70,7 +71,8 @@ const Reports = () => {
           setLoading(false);
           return;
         }
-        response = await api.get(`/reports/customer-sales-history?customerName=${encodeURIComponent(filters.customerName)}&startDate=${filters.startDate}&endDate=${filters.endDate}`);
+        const paymentStatusParam = filters.paymentStatus !== 'all' ? `&paymentStatus=${filters.paymentStatus}` : '';
+        response = await api.get(`/reports/customer-sales-history?customerName=${encodeURIComponent(filters.customerName)}&startDate=${filters.startDate}&endDate=${filters.endDate}${paymentStatusParam}`);
       }
       setReportData(response.data);
       setLoading(false);
@@ -195,6 +197,19 @@ const Reports = () => {
                 onChange={e => setFilters({...filters, endDate: e.target.value})}
               />
             </div>
+            <div className="form-group">
+              <label className="form-label">Payment Status</label>
+              <select
+                className="form-select"
+                value={filters.paymentStatus}
+                onChange={e => setFilters({...filters, paymentStatus: e.target.value})}
+              >
+                <option value="all">All</option>
+                <option value="received">Received</option>
+                <option value="partial">Partial</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
             <button className="btn btn-primary" onClick={fetchReport} disabled={loading}>
               {loading ? 'Loading...' : 'Generate Report'}
             </button>
@@ -239,19 +254,19 @@ const Reports = () => {
               <div className="card">
                 <h4>Total Revenue</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                  ₹{Number(reportData.summary.totalRevenue || 0).toFixed(2)}
+                  Rs {Number(reportData.summary.totalRevenue || 0).toFixed(2)}
                 </p>
               </div>
               <div className="card">
                 <h4>Total Expenses</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger-color)'}}>
-                  ₹{Number(reportData.summary.totalExpenses || 0).toFixed(2)}
+                  Rs {Number(reportData.summary.totalExpenses || 0).toFixed(2)}
                 </p>
               </div>
               <div className="card">
                 <h4>Net Profit</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: reportData.summary.profit >= 0 ? 'var(--secondary-color)' : 'var(--danger-color)'}}>
-                  ₹{Number(reportData.summary.profit || 0).toFixed(2)}
+                  Rs {Number(reportData.summary.profit || 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -262,19 +277,19 @@ const Reports = () => {
               <div className="card">
                 <h4>Total Revenue</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                  ₹{Number(reportData.revenue.total || 0).toFixed(2)}
+                  Rs {Number(reportData.revenue.total || 0).toFixed(2)}
                 </p>
               </div>
               <div className="card">
                 <h4>Total Expenses</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger-color)'}}>
-                  ₹{Number(reportData.expenses.total || 0).toFixed(2)}
+                  Rs {Number(reportData.expenses.total || 0).toFixed(2)}
                 </p>
               </div>
               <div className="card">
                 <h4>Net {reportData.profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</h4>
                 <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: reportData.profitLoss.status === 'profit' ? 'var(--secondary-color)' : 'var(--danger-color)'}}>
-                  ₹{Number(Math.abs(reportData.profitLoss.netProfit || 0)).toFixed(2)}
+                  Rs {Number(Math.abs(reportData.profitLoss.netProfit || 0)).toFixed(2)}
                 </p>
                 <p className="text-center">Margin: {reportData.profitLoss.profitMargin}%</p>
               </div>

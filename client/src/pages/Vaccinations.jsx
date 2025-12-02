@@ -91,7 +91,7 @@ const Vaccinations = () => {
                   <td data-label="Date Administered">{new Date(vacc.dateAdministered).toLocaleDateString()}</td>
                   <td data-label="Next Due">{vacc.nextDueDate ? new Date(vacc.nextDueDate).toLocaleDateString() : 'N/A'}</td>
                   <td data-label="Veterinarian">{vacc.veterinarian || 'N/A'}</td>
-                  <td data-label="Cost">₹{Number(vacc.cost || 0).toFixed(2)}</td>
+                  <td data-label="Cost">Rs {Number(vacc.cost || 0).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

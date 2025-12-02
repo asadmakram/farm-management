@@ -85,21 +85,21 @@ const Expenses = () => {
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Asset Expenses</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
-            ₹{assetTotal.toFixed(2)}
+            Rs {assetTotal.toFixed(2)}
           </p>
           <small style={{ color: 'var(--text-secondary)' }}>Capital investments</small>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Operating Expenses</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--danger-color)' }}>
-            ₹{operatingTotal.toFixed(2)}
+            Rs {operatingTotal.toFixed(2)}
           </p>
           <small style={{ color: 'var(--text-secondary)' }}>Monthly/recurring costs</small>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Expenses</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-            ₹{(assetTotal + operatingTotal).toFixed(2)}
+            Rs {(assetTotal + operatingTotal).toFixed(2)}
           </p>
           <small style={{ color: 'var(--text-secondary)' }}>All categories</small>
         </div>
@@ -152,7 +152,7 @@ const Expenses = () => {
                   </td>
                   <td><span className="status-badge">{expense.category.replace(/_/g, ' ')}</span></td>
                   <td>{expense.description || 'N/A'}</td>
-                  <td><strong>₹{expense.amount.toFixed(2)}</strong></td>
+                  <td><strong>Rs {expense.amount.toFixed(2)}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -238,7 +238,7 @@ const Expenses = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Amount (₹) *</label>
+                  <label className="form-label">Amount (Rs ) *</label>
                   <input
                     type="number"
                     step="0.01"

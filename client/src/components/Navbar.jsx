@@ -152,7 +152,7 @@ const Navbar = () => {
                 >
                   <span className="d-flex align-items-center">
                     <FaCoins className="me-2" />
-                    {currencies.find(c => c.code === preferredCurrency)?.symbol || '₹'} {preferredCurrency}
+                    {currencies.find(c => c.code === preferredCurrency)?.symbol || 'Rs '} {preferredCurrency}
                   </span>
                 </button>
                 <ul className="dropdown-menu w-100" aria-labelledby="currencyDropdown">

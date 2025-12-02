@@ -153,7 +153,7 @@ function RecurringExpenses() {
         </div>
         <div className="summary-card">
           <h3>Estimated Monthly Cost</h3>
-          <p className="summary-value">₹{summary.estimatedMonthly.toFixed(2)}</p>
+          <p className="summary-value">Rs {summary.estimatedMonthly.toFixed(2)}</p>
         </div>
       </div>
 
@@ -183,12 +183,12 @@ function RecurringExpenses() {
                   )}
                 </td>
                 <td>{expense.description || '-'}</td>
-                <td>₹{expense.amount.toFixed(2)}</td>
+                <td>Rs {expense.amount.toFixed(2)}</td>
                 <td>
                   <span className="status-badge">{getFrequencyLabel(expense.frequency)}</span>
                 </td>
                 <td>
-                  <strong>₹{calculateMonthlyAmount(expense.amount, expense.frequency, expense.workerCount).toFixed(2)}</strong>
+                  <strong>Rs {calculateMonthlyAmount(expense.amount, expense.frequency, expense.workerCount).toFixed(2)}</strong>
                 </td>
                 <td>{new Date(expense.lastPurchaseDate).toLocaleDateString()}</td>
                 <td>
@@ -336,7 +336,7 @@ function RecurringExpenses() {
               </div>
 
               <div className="info-box">
-                <strong>Estimated Monthly Cost:</strong> ₹
+                <strong>Estimated Monthly Cost:</strong> Rs 
                 {calculateMonthlyAmount(
                   parseFloat(formData.amount || 0), 
                   formData.frequency,

@@ -206,7 +206,9 @@
     "unknownCustomer": "Unknown Customer",
     "sale": "sale",
     "sales": "sales",
-    "liters": "Liters"
+    "liters": "Liters",
+    "filterByCustomer": "Filter by Customer",
+    "allCustomers": "All Customers"
   },
   "more": {
     "title": "More Options",

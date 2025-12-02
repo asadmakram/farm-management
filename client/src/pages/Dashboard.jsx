@@ -142,7 +142,7 @@ const Dashboard = () => {
             <FaMoneyBillWave color="#f59e0b" />
           </div>
           <div className="stat-content">
-            <h3>₹{Number(sales.monthRevenue || 0).toFixed(2)}</h3>
+            <h3>Rs {Number(sales.monthRevenue || 0).toFixed(2)}</h3>
             <p>Month Revenue</p>
             <span className={`stat-trend ${Number(sales.revenueTrend || 0) >= 0 ? 'positive' : 'negative'}`}>
               {Number(sales.revenueTrend || 0) >= 0 ? '↑' : '↓'} {Number(Math.abs(sales.revenueTrend || 0)).toFixed(1)}%
@@ -155,7 +155,7 @@ const Dashboard = () => {
             <FaChartLine color={profitLoss.status === 'profit' ? '#10b981' : '#ef4444'} />
           </div>
           <div className="stat-content">
-            <h3>₹{Number(profitLoss.monthProfit || 0).toFixed(2)}</h3>
+            <h3>Rs {Number(profitLoss.monthProfit || 0).toFixed(2)}</h3>
             <p>Monthly {profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</p>
             <span className="stat-badge">{profitLoss.profitMargin}% margin</span>
           </div>
@@ -222,7 +222,7 @@ const Dashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="amount" fill="#f59e0b" name="Amount (₹)" />
+                <Bar dataKey="amount" fill="#f59e0b" name="Amount (Rs )" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -241,7 +241,7 @@ const Dashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="revenue" fill="#10b981" name="Revenue (₹)" />
+                <Bar dataKey="revenue" fill="#10b981" name="Revenue (Rs )" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -270,10 +270,10 @@ const Dashboard = () => {
                   <tr key={index}>
                     <td className="text-left">{customer.name}</td>
                     <td className="text-right">{customer.quantity.toFixed(1)} L</td>
-                    <td className="text-right">₹{customer.revenue.toFixed(2)}</td>
-                    <td className="text-right" style={{ color: 'var(--success-color)' }}>₹{customer.received.toFixed(2)}</td>
+                    <td className="text-right">Rs {customer.revenue.toFixed(2)}</td>
+                    <td className="text-right" style={{ color: 'var(--success-color)' }}>Rs {customer.received.toFixed(2)}</td>
                     <td className="text-right" style={{ color: customer.pending > 0 ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
-                      ₹{customer.pending.toFixed(2)}
+                      Rs {customer.pending.toFixed(2)}
                     </td>
                   </tr>
                 ))}

@@ -132,13 +132,13 @@ function Contracts() {
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Advance Held</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning-color)' }}>
-            ₹{(summary.totalAdvanceHeld || 0).toFixed(2)}
+            Rs {(summary.totalAdvanceHeld || 0).toFixed(2)}
           </p>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Advance Returned</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success-color)' }}>
-            ₹{(summary.totalAdvanceReturned || 0).toFixed(2)}
+            Rs {(summary.totalAdvanceReturned || 0).toFixed(2)}
           </p>
         </div>
       </div>
@@ -164,8 +164,8 @@ function Contracts() {
                 <td><strong>{contract.vendorName}</strong></td>
                 <td>{new Date(contract.startDate).toLocaleDateString()}</td>
                 <td>{new Date(contract.endDate).toLocaleDateString()}</td>
-                <td>₹{contract.ratePerLiter.toFixed(2)}</td>
-                <td>₹{contract.advanceAmount.toFixed(2)}</td>
+                <td>Rs {contract.ratePerLiter.toFixed(2)}</td>
+                <td>Rs {contract.advanceAmount.toFixed(2)}</td>
                 <td>
                   <span className={`status-badge ${contract.status}`}>
                     {contract.status}

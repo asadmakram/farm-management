@@ -259,7 +259,7 @@ router.get('/animal-performance', auth, async (req, res) => {
 // @access  Private
 router.get('/customer-sales-history', auth, async (req, res) => {
   try {
-    const { customerName, startDate, endDate } = req.query;
+    const { customerName, startDate, endDate, paymentStatus } = req.query;
     
     if (!customerName) {
       return res.status(400).json({ 
@@ -283,12 +283,19 @@ router.get('/customer-sales-history', auth, async (req, res) => {
     // Escape special regex characters
     const escapedName = customerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Find direct sales by customer name
-    let sales = await MilkSale.find({
+    // Build query with optional payment status filter
+    const baseQuery = {
       userId: req.user._id,
       customerName: { $regex: new RegExp(`^\\s*${escapedName}\\s*$`, 'i') },
       date: { $gte: start, $lte: end }
-    }).sort({ date: 1 });
+    };
+    
+    if (paymentStatus && paymentStatus !== 'all') {
+      baseQuery.paymentStatus = paymentStatus;
+    }
+
+    // Find direct sales by customer name
+    let sales = await MilkSale.find(baseQuery).sort({ date: 1 });
 
     // Also find bandhi sales where contract vendor name matches
     const Contract = require('../models/Contract');
@@ -299,11 +306,17 @@ router.get('/customer-sales-history', auth, async (req, res) => {
 
     if (matchingContracts.length > 0) {
       const contractIds = matchingContracts.map(c => c._id);
-      const bandhiSales = await MilkSale.find({
+      const bandhiQuery = {
         userId: req.user._id,
         contractId: { $in: contractIds },
         date: { $gte: start, $lte: end }
-      }).sort({ date: 1 });
+      };
+      
+      if (paymentStatus && paymentStatus !== 'all') {
+        bandhiQuery.paymentStatus = paymentStatus;
+      }
+      
+      const bandhiSales = await MilkSale.find(bandhiQuery).sort({ date: 1 });
       
       // Merge and remove duplicates
       const existingIds = new Set(sales.map(s => s._id.toString()));

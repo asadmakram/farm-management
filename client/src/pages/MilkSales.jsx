@@ -146,9 +146,9 @@ const MilkSales = () => {
       const { remainingAmount, data } = response.data;
       
       if (remainingAmount > 0) {
-        toast.info(`Payment allocated to ${data.length} sale(s). Excess amount: ₹${remainingAmount.toFixed(2)}`);
+        toast.info(`Payment allocated to ${data.length} sale(s). Excess amount: Rs ${remainingAmount.toFixed(2)}`);
       } else {
-        toast.success(`Payment of ₹${paymentAllocationData.amount} allocated to ${data.length} sale(s)`);
+        toast.success(`Payment of Rs ${paymentAllocationData.amount} allocated to ${data.length} sale(s)`);
       }
       
       setShowPaymentAllocationModal(false);
@@ -305,28 +305,28 @@ const MilkSales = () => {
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
             {summary.bandhi?.quantity || 0}L
           </p>
-          <small style={{ color: 'var(--text-secondary)' }}>₹{(summary.bandhi?.revenue || 0).toFixed(2)}</small>
+          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.bandhi?.revenue || 0).toFixed(2)}</small>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Mandi (Market)</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning-color)' }}>
             {summary.mandi?.quantity || 0}L
           </p>
-          <small style={{ color: 'var(--text-secondary)' }}>₹{(summary.mandi?.revenue || 0).toFixed(2)}</small>
+          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.mandi?.revenue || 0).toFixed(2)}</small>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Door-to-Door</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success-color)' }}>
             {summary.door_to_door?.quantity || 0}L
           </p>
-          <small style={{ color: 'var(--text-secondary)' }}>₹{(summary.door_to_door?.revenue || 0).toFixed(2)}</small>
+          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.door_to_door?.revenue || 0).toFixed(2)}</small>
         </div>
         <div className="card" style={{ padding: '1rem' }}>
           <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Revenue</h4>
           <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-            ₹{(summary.totalRevenue || 0).toFixed(2)}
+            Rs {(summary.totalRevenue || 0).toFixed(2)}
           </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Pending: ₹{(summary.pending || 0).toFixed(2)}</small>
+          <small style={{ color: 'var(--text-secondary)' }}>Pending: Rs {(summary.pending || 0).toFixed(2)}</small>
         </div>
       </div>
 
@@ -553,7 +553,7 @@ const MilkSales = () => {
                       <option value="">Choose a contract</option>
                       {contracts.map(contract => (
                         <option key={contract._id} value={contract._id}>
-                          {contract.vendorName} - ₹{contract.ratePerLiter}/L
+                          {contract.vendorName} - Rs {contract.ratePerLiter}/L
                         </option>
                       ))}
                     </select>
@@ -659,7 +659,7 @@ const MilkSales = () => {
                       <span>Total Rate Calculation</span>
                     </div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-                      ₹{(parseFloat(formData.ratePerLiter || 0) + parseFloat(formData.packagingCost || 0)).toFixed(2)}/L
+                      Rs {(parseFloat(formData.ratePerLiter || 0) + parseFloat(formData.packagingCost || 0)).toFixed(2)}/L
                     </div>
                     <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                       Base Rate + Packaging Cost
@@ -753,7 +753,7 @@ const MilkSales = () => {
                       const pendingAmount = getCustomerPendingAmount(customer);
                       return (
                         <option key={customer} value={customer}>
-                          {customer} {pendingAmount > 0 ? `(Pending: ₹${pendingAmount.toFixed(2)})` : '(No pending)'}
+                          {customer} {pendingAmount > 0 ? `(Pending: Rs ${pendingAmount.toFixed(2)})` : '(No pending)'}
                         </option>
                       );
                     })}
@@ -767,7 +767,7 @@ const MilkSales = () => {
                       <span>Pending Amount</span>
                     </div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#b45309' }}>
-                      ₹{getCustomerPendingAmount(paymentAllocationData.customerName).toFixed(2)}
+                      Rs {getCustomerPendingAmount(paymentAllocationData.customerName).toFixed(2)}
                     </div>
                     <small style={{ color: '#92400e', fontSize: '0.75rem' }}>
                       This amount will be auto-allocated from oldest transactions first (FIFO)
@@ -842,11 +842,11 @@ const MilkSales = () => {
                         {paymentPreview.filter(p => !p.isExcess).map(preview => (
                           <tr key={preview._id}>
                             <td className="text-left">{new Date(preview.date).toLocaleDateString()}</td>
-                            <td className="text-right">₹{preview.totalAmount.toFixed(0)}</td>
-                            <td className="text-right" style={{ color: 'var(--danger-color)' }}>₹{preview.currentPending.toFixed(0)}</td>
-                            <td className="text-right" style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>₹{preview.amountToApply.toFixed(0)}</td>
+                            <td className="text-right">Rs {preview.totalAmount.toFixed(0)}</td>
+                            <td className="text-right" style={{ color: 'var(--danger-color)' }}>Rs {preview.currentPending.toFixed(0)}</td>
+                            <td className="text-right" style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>Rs {preview.amountToApply.toFixed(0)}</td>
                             <td className="text-right" style={{ color: preview.remainingPending > 0 ? 'var(--warning-color)' : 'var(--text-secondary)' }}>
-                              ₹{preview.remainingPending.toFixed(0)}
+                              Rs {preview.remainingPending.toFixed(0)}
                             </td>
                             <td className="text-center">
                               <span className={`status-badge ${preview.newStatus}`} style={{ fontSize: '0.75rem' }}>
@@ -863,7 +863,7 @@ const MilkSales = () => {
                     <div className="info-box" style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)', border: '1px solid #3b82f6', borderRadius: '0.5rem', padding: '0.75rem', marginTop: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#1d4ed8' }}>
                         <span>💡</span>
-                        <span>Excess Amount: ₹{paymentPreview.find(p => p.isExcess).excessAmount.toFixed(2)}</span>
+                        <span>Excess Amount: Rs {paymentPreview.find(p => p.isExcess).excessAmount.toFixed(2)}</span>
                       </div>
                       <small style={{ color: '#1e40af', fontSize: '0.75rem' }}>
                         This amount exceeds all pending sales and will be credited in advance.
