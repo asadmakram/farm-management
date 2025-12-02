@@ -24,7 +24,6 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.dairyfarm.manager",
-      "versionCode": 1,
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
