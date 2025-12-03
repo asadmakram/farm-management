@@ -37,7 +37,7 @@ const expenseSchema = new mongoose.Schema({
   },
   expenseType: {
     type: String,
-    enum: ['asset', 'operating'],
+    enum: ['asset', 'operating', 'one_time'],
     required: true,
     default: 'operating'
   },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaCheckCircle, FaPause, FaTag, FaDollarSign } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
@@ -10,6 +10,7 @@ const Animals = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAnimal, setEditingAnimal] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
   const [formData, setFormData] = useState({
     tagNumber: '',
     name: '',
@@ -100,45 +101,146 @@ const Animals = () => {
 
   if (loading) return <div className="container mt-3">Loading...</div>;
 
+  const activeCount = animals.filter(a => a.status === 'active').length;
+  const dryCount = animals.filter(a => a.status === 'dry').length;
+  const soldCount = animals.filter(a => a.status === 'sold').length;
+  const totalValue = animals.reduce((sum, a) => sum + (a.purchasePrice || 0), 0);
+
+  const filteredAnimals = filterStatus === 'all' 
+    ? animals 
+    : animals.filter(a => a.status === filterStatus);
+
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><GiCow /> Animals</h1>
         <button className="btn btn-primary" onClick={() => openModal()}>
-          <FaPlus /> Add Animal
+          <FaPlus /> <span className="hide-mobile">Add Animal</span>
         </button>
       </div>
 
-      <div className="grid grid-3">
-        {animals.map(animal => (
-          <div key={animal._id} className="card animal-card">
-            <div className="animal-header">
-              <h3>{animal.tagNumber}</h3>
-              <span className={`status-badge ${animal.status}`}>{animal.status}</span>
-            </div>
-            <div className="animal-details">
-              <p><strong>Name:</strong> {animal.name || 'N/A'}</p>
-              <p><strong>Breed:</strong> {animal.breed}</p>
-              <p><strong>Gender:</strong> {animal.gender}</p>
-              <p><strong>Age:</strong> {Math.floor((new Date() - new Date(animal.dateOfBirth)) / (1000 * 60 * 60 * 24 * 365))} years</p>
-              {animal.weight && <p><strong>Weight:</strong> {animal.weight} kg</p>}
-            </div>
-            <div className="card-actions">
-              <button className="btn btn-outline btn-sm" onClick={() => openModal(animal)}>
-                <FaEdit /> Edit
-              </button>
-              <button className="btn btn-danger btn-sm" onClick={() => handleDelete(animal._id)}>
-                <FaTrash /> Delete
-              </button>
-            </div>
+      {/* Summary Cards */}
+      <div className="summary-grid">
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--success-color)' }}>
+            <FaCheckCircle />
           </div>
-        ))}
+          <div className="summary-content">
+            <span className="summary-label">Active</span>
+            <span className="summary-value">{activeCount}</span>
+            <span className="summary-sub">Producing milk</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--warning-color)' }}>
+            <FaPause />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Dry</span>
+            <span className="summary-value">{dryCount}</span>
+            <span className="summary-sub">Not producing</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+            <FaTag />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Total</span>
+            <span className="summary-value">{animals.length}</span>
+            <span className="summary-sub">All animals</span>
+          </div>
+        </div>
       </div>
 
-      {animals.length === 0 && (
+      {/* Total Value Card */}
+      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '1rem', opacity: 0.9 }}>Total Investment Value</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Rs {totalValue.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="filters-section">
+        <div className="filter-tabs">
+          <button 
+            className={`filter-tab ${filterStatus === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('all')}
+          >
+            All ({animals.length})
+          </button>
+          <button 
+            className={`filter-tab ${filterStatus === 'active' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('active')}
+          >
+            Active ({activeCount})
+          </button>
+          <button 
+            className={`filter-tab ${filterStatus === 'dry' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('dry')}
+          >
+            Dry ({dryCount})
+          </button>
+          <button 
+            className={`filter-tab ${filterStatus === 'sold' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('sold')}
+          >
+            Sold ({soldCount})
+          </button>
+        </div>
+      </div>
+
+      {filteredAnimals.length > 0 ? (
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Tag #</th>
+                <th className="hide-mobile">Name</th>
+                <th>Breed</th>
+                <th className="hide-tablet">Gender</th>
+                <th className="hide-tablet">Age</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAnimals.map(animal => (
+                <tr key={animal._id}>
+                  <td><strong>{animal.tagNumber}</strong></td>
+                  <td className="hide-mobile">{animal.name || '-'}</td>
+                  <td>{animal.breed}</td>
+                  <td className="hide-tablet">{animal.gender}</td>
+                  <td className="hide-tablet">{Math.floor((new Date() - new Date(animal.dateOfBirth)) / (1000 * 60 * 60 * 24 * 365))} yrs</td>
+                  <td>
+                    <span className={`badge ${
+                      animal.status === 'active' ? 'badge-success' : 
+                      animal.status === 'dry' ? 'badge-warning' : 
+                      animal.status === 'sold' ? 'badge-primary' : 'badge-danger'
+                    }`}>
+                      {animal.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button className="btn-icon-only btn-primary" onClick={() => openModal(animal)} title="Edit">
+                        <FaEdit />
+                      </button>
+                      <button className="btn-icon-only btn-danger" onClick={() => handleDelete(animal._id)} title="Delete">
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
         <div className="empty-state">
           <GiCow size={48} />
-          <p>No animals added yet</p>
+          <p>No animals found</p>
           <button className="btn btn-primary" onClick={() => openModal()}>
             <FaPlus /> Add Your First Animal
           </button>

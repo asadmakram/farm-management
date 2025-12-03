@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaChartBar, FaWhatsapp, FaDownload } from 'react-icons/fa';
+import { FaChartBar, FaWhatsapp, FaDownload, FaTint, FaMoneyBillWave, FaBalanceScale, FaUsers } from 'react-icons/fa';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
@@ -117,29 +117,45 @@ const Reports = () => {
 
   return (
     <div className="container mt-3">
-      <h1 className="page-title"><FaChartBar /> Reports</h1>
+      <div className="page-header-mobile">
+        <h1 className="page-title"><FaChartBar /> Reports</h1>
+      </div>
 
-      <div className="filter-section">
-        <div className="form-group mb-2">
-          <label className="form-label">Report Type</label>
-          <select
-            className="form-select"
-            value={reportType}
-            onChange={e => {
-              setReportType(e.target.value);
-              setReportData(null);
-            }}
+      {/* Report Type Selector */}
+      <div className="filters-section" style={{ marginBottom: '1rem' }}>
+        <div className="filter-tabs" style={{ width: '100%', flexWrap: 'wrap' }}>
+          <button 
+            className={`filter-tab ${reportType === 'milk-yield' ? 'active' : ''}`}
+            onClick={() => { setReportType('milk-yield'); setReportData(null); }}
           >
-            <option value="milk-yield">Monthly Milk Yield Report</option>
-            <option value="profit-loss">Profit & Loss Report</option>
-            <option value="animal-performance">Animal Performance Report</option>
-            <option value="customer-sales-history">Customer Sales History</option>
-          </select>
+            <FaTint className="hide-mobile" /> Milk Yield
+          </button>
+          <button 
+            className={`filter-tab ${reportType === 'profit-loss' ? 'active' : ''}`}
+            onClick={() => { setReportType('profit-loss'); setReportData(null); }}
+          >
+            <FaBalanceScale className="hide-mobile" /> Profit/Loss
+          </button>
+          <button 
+            className={`filter-tab ${reportType === 'animal-performance' ? 'active' : ''}`}
+            onClick={() => { setReportType('animal-performance'); setReportData(null); }}
+          >
+            <FaChartBar className="hide-mobile" /> Performance
+          </button>
+          <button 
+            className={`filter-tab ${reportType === 'customer-sales-history' ? 'active' : ''}`}
+            onClick={() => { setReportType('customer-sales-history'); setReportData(null); }}
+          >
+            <FaUsers className="hide-mobile" /> Customer History
+          </button>
         </div>
+      </div>
 
+      {/* Filters */}
+      <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
         {reportType === 'milk-yield' ? (
-          <div className="filter-row">
-            <div className="form-group">
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">Year</label>
               <input
                 type="number"
@@ -148,7 +164,7 @@ const Reports = () => {
                 onChange={e => setFilters({...filters, year: e.target.value})}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">Month</label>
               <select
                 className="form-select"
@@ -165,8 +181,8 @@ const Reports = () => {
             </button>
           </div>
         ) : reportType === 'customer-sales-history' ? (
-          <div className="filter-row">
-            <div className="form-group">
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: '1', minWidth: '150px' }}>
               <label className="form-label">Customer</label>
               <select
                 className="form-select"
@@ -179,7 +195,7 @@ const Reports = () => {
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">Start Date</label>
               <input
                 type="date"
@@ -188,7 +204,7 @@ const Reports = () => {
                 onChange={e => setFilters({...filters, startDate: e.target.value})}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">End Date</label>
               <input
                 type="date"
@@ -197,7 +213,7 @@ const Reports = () => {
                 onChange={e => setFilters({...filters, endDate: e.target.value})}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">Payment Status</label>
               <select
                 className="form-select"
@@ -211,12 +227,12 @@ const Reports = () => {
               </select>
             </div>
             <button className="btn btn-primary" onClick={fetchReport} disabled={loading}>
-              {loading ? 'Loading...' : 'Generate Report'}
+              {loading ? 'Loading...' : 'Generate'}
             </button>
           </div>
         ) : (
-          <div className="filter-row">
-            <div className="form-group">
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">Start Date</label>
               <input
                 type="date"
@@ -225,7 +241,7 @@ const Reports = () => {
                 onChange={e => setFilters({...filters, startDate: e.target.value})}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ flex: '1', minWidth: '120px' }}>
               <label className="form-label">End Date</label>
               <input
                 type="date"
@@ -244,182 +260,174 @@ const Reports = () => {
       {reportData && (
         <div className="mt-3">
           {reportType === 'milk-yield' && reportData.summary && (
-            <div className="grid grid-4">
-              <div className="card">
-                <h4>Total Yield</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>
-                  {Number(reportData.summary.totalYield || 0).toFixed(2)} L
-                </p>
+            <div className="summary-grid">
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+                  <FaTint />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Total Yield</span>
+                  <span className="summary-value">{Number(reportData.summary.totalYield || 0).toFixed(0)} L</span>
+                  <span className="summary-sub">This month</span>
+                </div>
               </div>
-              <div className="card">
-                <h4>Total Revenue</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                  Rs {Number(reportData.summary.totalRevenue || 0).toFixed(2)}
-                </p>
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: 'var(--success-color)' }}>
+                  <FaMoneyBillWave />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Revenue</span>
+                  <span className="summary-value">Rs {Number(reportData.summary.totalRevenue || 0).toLocaleString()}</span>
+                  <span className="summary-sub">Total sales</span>
+                </div>
               </div>
-              <div className="card">
-                <h4>Total Expenses</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger-color)'}}>
-                  Rs {Number(reportData.summary.totalExpenses || 0).toFixed(2)}
-                </p>
-              </div>
-              <div className="card">
-                <h4>Net Profit</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: reportData.summary.profit >= 0 ? 'var(--secondary-color)' : 'var(--danger-color)'}}>
-                  Rs {Number(reportData.summary.profit || 0).toFixed(2)}
-                </p>
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: reportData.summary.profit >= 0 ? 'var(--success-color)' : 'var(--danger-color)' }}>
+                  <FaBalanceScale />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Net Profit</span>
+                  <span className="summary-value">Rs {Number(reportData.summary.profit || 0).toLocaleString()}</span>
+                  <span className="summary-sub">{reportData.summary.profit >= 0 ? 'Profit' : 'Loss'}</span>
+                </div>
               </div>
             </div>
           )}
 
           {reportType === 'profit-loss' && reportData.profitLoss && (
-            <div className="grid grid-3">
-              <div className="card">
-                <h4>Total Revenue</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                  Rs {Number(reportData.revenue.total || 0).toFixed(2)}
-                </p>
+            <div className="summary-grid">
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: 'var(--success-color)' }}>
+                  <FaMoneyBillWave />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Total Revenue</span>
+                  <span className="summary-value">Rs {Number(reportData.revenue.total || 0).toLocaleString()}</span>
+                  <span className="summary-sub">Income</span>
+                </div>
               </div>
-              <div className="card">
-                <h4>Total Expenses</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--danger-color)'}}>
-                  Rs {Number(reportData.expenses.total || 0).toFixed(2)}
-                </p>
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: 'var(--danger-color)' }}>
+                  <FaMoneyBillWave />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Total Expenses</span>
+                  <span className="summary-value">Rs {Number(reportData.expenses.total || 0).toLocaleString()}</span>
+                  <span className="summary-sub">Outgoing</span>
+                </div>
               </div>
-              <div className="card">
-                <h4>Net {reportData.profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</h4>
-                <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: reportData.profitLoss.status === 'profit' ? 'var(--secondary-color)' : 'var(--danger-color)'}}>
-                  Rs {Number(Math.abs(reportData.profitLoss.netProfit || 0)).toFixed(2)}
-                </p>
-                <p className="text-center">Margin: {reportData.profitLoss.profitMargin}%</p>
+              <div className="summary-card">
+                <div className="summary-icon" style={{ background: reportData.profitLoss.status === 'profit' ? 'var(--success-color)' : 'var(--danger-color)' }}>
+                  <FaBalanceScale />
+                </div>
+                <div className="summary-content">
+                  <span className="summary-label">Net {reportData.profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</span>
+                  <span className="summary-value">Rs {Number(Math.abs(reportData.profitLoss.netProfit || 0)).toLocaleString()}</span>
+                  <span className="summary-sub">Margin: {reportData.profitLoss.profitMargin}%</span>
+                </div>
               </div>
             </div>
           )}
           
           {reportType === 'customer-sales-history' && reportData && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3>Sales History for {reportData.customerName}</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ margin: 0 }}>Sales: {reportData.customerName}</h3>
                 <button 
                   className="btn btn-success" 
                   onClick={shareOnWhatsApp}
                   style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  <FaWhatsapp /> Share on WhatsApp
+                  <FaWhatsapp /> <span className="hide-mobile">Share on WhatsApp</span>
                 </button>
               </div>
 
-              <div className="grid grid-4">
-                <div className="card">
-                  <h4>Total Sales</h4>
-                  <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>
-                    {reportData.summary.totalSales}
-                  </p>
+              <div className="summary-grid">
+                <div className="summary-card">
+                  <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+                    <FaTint />
+                  </div>
+                  <div className="summary-content">
+                    <span className="summary-label">Total Quantity</span>
+                    <span className="summary-value">{reportData.summary.totalQuantity} L</span>
+                    <span className="summary-sub">{reportData.summary.totalSales} sales</span>
+                  </div>
                 </div>
-                <div className="card">
-                  <h4>Total Quantity</h4>
-                  <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                    {reportData.summary.totalQuantity} L
-                  </p>
+                <div className="summary-card">
+                  <div className="summary-icon" style={{ background: 'var(--success-color)' }}>
+                    <FaMoneyBillWave />
+                  </div>
+                  <div className="summary-content">
+                    <span className="summary-label">Paid</span>
+                    <span className="summary-value">Rs {reportData.summary.totalPaid.toLocaleString()}</span>
+                    <span className="summary-sub">Received</span>
+                  </div>
                 </div>
-                <div className="card">
-                  <h4>Total Amount</h4>
-                  <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>
-                    Rs {reportData.summary.totalAmount.toFixed(2)}
-                  </p>
-                </div>
-                <div className="card">
-                  <h4>Average Rate</h4>
-                  <p className="text-center" style={{fontSize: '2rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                    Rs {reportData.summary.averageRate}/L
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-3" style={{marginTop: '20px'}}>
-                <div className="card">
-                  <h4>Amount Paid</h4>
-                  <p className="text-center" style={{fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-                    Rs {reportData.summary.totalPaid.toFixed(2)}
-                  </p>
-                </div>
-                <div className="card">
-                  <h4>Amount Pending</h4>
-                  <p className="text-center" style={{fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--danger-color)'}}>
-                    Rs {reportData.summary.totalPending.toFixed(2)}
-                  </p>
-                </div>
-                <div className="card">
-                  <h4>Payment Status</h4>
-                  <p className="text-center" style={{fontSize: '1.8rem', fontWeight: 'bold', color: reportData.summary.totalPending === 0 ? 'var(--secondary-color)' : 'var(--warning-color)'}}>
-                    {reportData.summary.totalPending === 0 ? 'Fully Paid' : 'Partially Paid'}
-                  </p>
+                <div className="summary-card">
+                  <div className="summary-icon" style={{ background: 'var(--danger-color)' }}>
+                    <FaMoneyBillWave />
+                  </div>
+                  <div className="summary-content">
+                    <span className="summary-label">Pending</span>
+                    <span className="summary-value">Rs {reportData.summary.totalPending.toLocaleString()}</span>
+                    <span className="summary-sub">Outstanding</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="card" style={{marginTop: '20px'}}>
-                <h3>Daily Sales Breakdown</h3>
-                <div style={{overflowX: 'auto'}}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Morning (L)</th>
-                        <th>Evening (L)</th>
-                        <th>Total Qty (L)</th>
-                        <th>Amount</th>
-                        <th>Paid</th>
-                        <th>Pending</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reportData.salesByDate.map((day, index) => (
-                        <tr key={index}>
-                          <td>{new Date(day.date).toLocaleDateString()}</td>
-                          <td>
-                            {day.morning.count > 0 ? (
-                              <span>
-                                {day.morning.quantity.toFixed(1)} L<br/>
-                                <small style={{color: '#666'}}>@ Rs {day.morning.rate}/L</small>
-                              </span>
-                            ) : '-'}
-                          </td>
-                          <td>
-                            {day.evening.count > 0 ? (
-                              <span>
-                                {day.evening.quantity.toFixed(1)} L<br/>
-                                <small style={{color: '#666'}}>@ Rs {day.evening.rate}/L</small>
-                              </span>
-                            ) : '-'}
-                          </td>
-                          <td><strong>{day.totalQuantity.toFixed(1)}</strong></td>
-                          <td><strong>Rs {day.totalAmount.toFixed(2)}</strong></td>
-                          <td style={{color: 'var(--secondary-color)'}}>Rs {day.amountPaid.toFixed(2)}</td>
-                          <td style={{color: 'var(--danger-color)'}}>Rs {day.amountPending.toFixed(2)}</td>
-                          <td>
-                            <span className={`badge ${day.amountPending === 0 ? 'badge-success' : day.amountPaid > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                              {day.amountPending === 0 ? 'Paid' : day.amountPaid > 0 ? 'Partial' : 'Pending'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{fontWeight: 'bold', backgroundColor: '#f8f9fa'}}>
-                        <td colSpan="3">Total</td>
-                        <td>{reportData.summary.totalQuantity.toFixed(1)} L</td>
-                        <td>Rs {reportData.summary.totalAmount.toFixed(2)}</td>
-                        <td style={{color: 'var(--secondary-color)'}}>Rs {reportData.summary.totalPaid.toFixed(2)}</td>
-                        <td style={{color: 'var(--danger-color)'}}>Rs {reportData.summary.totalPending.toFixed(2)}</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+              {/* Total Card */}
+              <div className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1rem', opacity: 0.9 }}>Total Amount (Avg Rs {reportData.summary.averageRate}/L)</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Rs {reportData.summary.totalAmount.toLocaleString()}</span>
                 </div>
+              </div>
+
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th className="hide-mobile">Morning</th>
+                      <th className="hide-mobile">Evening</th>
+                      <th>Qty (L)</th>
+                      <th>Amount</th>
+                      <th className="hide-tablet">Paid</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.salesByDate.map((day, index) => (
+                      <tr key={index}>
+                        <td>{new Date(day.date).toLocaleDateString()}</td>
+                        <td className="hide-mobile">
+                          {day.morning.count > 0 ? `${day.morning.quantity.toFixed(1)} L` : '-'}
+                        </td>
+                        <td className="hide-mobile">
+                          {day.evening.count > 0 ? `${day.evening.quantity.toFixed(1)} L` : '-'}
+                        </td>
+                        <td><strong>{day.totalQuantity.toFixed(1)}</strong></td>
+                        <td><strong>Rs {day.totalAmount.toLocaleString()}</strong></td>
+                        <td className="hide-tablet" style={{ color: 'var(--success-color)' }}>Rs {day.amountPaid.toLocaleString()}</td>
+                        <td>
+                          <span className={`badge ${day.amountPending === 0 ? 'badge-success' : day.amountPaid > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                            {day.amountPending === 0 ? 'Paid' : day.amountPaid > 0 ? 'Partial' : 'Pending'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {!reportData && !loading && (
+        <div className="empty-state">
+          <FaChartBar size={48} />
+          <p>Select report type and filters, then generate report</p>
         </div>
       )}
     </div>

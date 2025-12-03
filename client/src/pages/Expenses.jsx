@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaMoneyBillWave } from 'react-icons/fa';
+import { FaPlus, FaMoneyBillWave, FaTrash, FaBox, FaSync, FaShoppingCart } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -57,6 +57,18 @@ const Expenses = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this expense?')) {
+      try {
+        await api.delete(`/expenses/${id}`);
+        toast.success('Expense deleted successfully');
+        fetchExpenses();
+      } catch (error) {
+        toast.error('Error deleting expense');
+      }
+    }
+  };
+
   if (loading) return <div className="container mt-3">Loading...</div>;
 
   const filteredExpenses = filterType === 'all' 
@@ -71,74 +83,102 @@ const Expenses = () => {
     .filter(e => e.expenseType === 'operating')
     .reduce((sum, e) => sum + e.amount, 0);
 
+  const oneTimeTotal = expenses
+    .filter(e => e.expenseType === 'one_time')
+    .reduce((sum, e) => sum + e.amount, 0);
+
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><FaMoneyBillWave /> Expenses</h1>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <FaPlus /> Add Expense
+          <FaPlus /> <span className="hide-mobile">Add Expense</span>
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-3 mb-3">
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Asset Expenses</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
-            Rs {assetTotal.toFixed(2)}
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Capital investments</small>
+      <div className="summary-grid">
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+            <FaBox />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Asset Expenses</span>
+            <span className="summary-value">Rs {assetTotal.toLocaleString()}</span>
+            <span className="summary-sub">Capital investments</span>
+          </div>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Operating Expenses</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--danger-color)' }}>
-            Rs {operatingTotal.toFixed(2)}
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Monthly/recurring costs</small>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--danger-color)' }}>
+            <FaSync />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Operating Expenses</span>
+            <span className="summary-value">Rs {operatingTotal.toLocaleString()}</span>
+            <span className="summary-sub">Recurring costs</span>
+          </div>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Expenses</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-            Rs {(assetTotal + operatingTotal).toFixed(2)}
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>All categories</small>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--warning-color)' }}>
+            <FaShoppingCart />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">One-time Expenses</span>
+            <span className="summary-value">Rs {oneTimeTotal.toLocaleString()}</span>
+            <span className="summary-sub">Single purchases</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Total Card */}
+      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '1rem', opacity: 0.9 }}>Total Expenses</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Rs {(assetTotal + operatingTotal + oneTimeTotal).toLocaleString()}</span>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="filter-section">
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div className="filters-section">
+        <div className="filter-tabs">
           <button 
-            className={`btn ${filterType === 'all' ? 'btn-primary' : 'btn-outline'}`}
+            className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
             onClick={() => setFilterType('all')}
           >
-            All Expenses
+            All
           </button>
           <button 
-            className={`btn ${filterType === 'asset' ? 'btn-primary' : 'btn-outline'}`}
+            className={`filter-tab ${filterType === 'asset' ? 'active' : ''}`}
             onClick={() => setFilterType('asset')}
           >
-            Asset Expenses
+            <FaBox className="hide-mobile" /> Asset
           </button>
           <button 
-            className={`btn ${filterType === 'operating' ? 'btn-primary' : 'btn-outline'}`}
+            className={`filter-tab ${filterType === 'operating' ? 'active' : ''}`}
             onClick={() => setFilterType('operating')}
           >
-            Operating Expenses
+            <FaSync className="hide-mobile" /> Operating
+          </button>
+          <button 
+            className={`filter-tab ${filterType === 'one_time' ? 'active' : ''}`}
+            onClick={() => setFilterType('one_time')}
+          >
+            <FaShoppingCart className="hide-mobile" /> One-time
           </button>
         </div>
       </div>
 
       {filteredExpenses.length > 0 ? (
-        <div className="table-container">
-          <table>
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Type</th>
-                <th>Category</th>
-                <th>Description</th>
+                <th className="hide-mobile">Category</th>
+                <th className="hide-tablet">Description</th>
                 <th>Amount</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -146,13 +186,28 @@ const Expenses = () => {
                 <tr key={expense._id}>
                   <td>{new Date(expense.date).toLocaleDateString()}</td>
                   <td>
-                    <span className={`status-badge ${expense.expenseType}`}>
-                      {expense.expenseType === 'asset' ? '💎 Asset' : '🔄 Operating'}
+                    <span className={`badge ${
+                      expense.expenseType === 'asset' ? 'badge-primary' : 
+                      expense.expenseType === 'operating' ? 'badge-danger' : 'badge-warning'
+                    }`}>
+                      {expense.expenseType === 'asset' ? '💎' : expense.expenseType === 'operating' ? '🔄' : '🛒'}
+                      <span className="hide-mobile"> {expense.expenseType.replace('_', '-')}</span>
                     </span>
                   </td>
-                  <td><span className="status-badge">{expense.category.replace(/_/g, ' ')}</span></td>
-                  <td>{expense.description || 'N/A'}</td>
-                  <td><strong>Rs {expense.amount.toFixed(2)}</strong></td>
+                  <td className="hide-mobile">
+                    <span className="badge badge-secondary">{expense.category.replace(/_/g, ' ')}</span>
+                  </td>
+                  <td className="hide-tablet">{expense.description || '-'}</td>
+                  <td><strong>Rs {expense.amount.toLocaleString()}</strong></td>
+                  <td>
+                    <button 
+                      className="btn-icon-only btn-danger"
+                      onClick={() => handleDelete(expense._id)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -194,13 +249,16 @@ const Expenses = () => {
                   onChange={e => setFormData({...formData, expenseType: e.target.value})}
                   required
                 >
-                  <option value="operating">Operating Expense (Monthly/Recurring)</option>
-                  <option value="asset">Asset Expense (Capital Investment)</option>
+                  <option value="operating">🔄 Operating Expense (Recurring)</option>
+                  <option value="one_time">🛒 One-time Expense</option>
+                  <option value="asset">💎 Asset Purchase (Capital)</option>
                 </select>
-                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                   {formData.expenseType === 'asset' 
-                    ? '💎 Capital investment to increase assets' 
-                    : '🔄 Regular operational costs'}
+                    ? '💎 Capital investment to increase farm assets' 
+                    : formData.expenseType === 'operating'
+                    ? '🔄 Regular operational costs (feed, labour, etc.)'
+                    : '🛒 Single purchase that won\'t repeat'}
                 </small>
               </div>
 
@@ -238,7 +296,7 @@ const Expenses = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Amount (Rs ) *</label>
+                  <label className="form-label">Amount (Rs) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -256,6 +314,7 @@ const Expenses = () => {
                   className="form-textarea"
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
+                  placeholder="Add notes about this expense..."
                 />
               </div>
               <div className="modal-actions">

@@ -4,20 +4,16 @@ import { useAuth } from '../context/AuthContext.jsx';
 import {
   FaHome, FaTint, FaMoneyBillWave, FaSyringe,
   FaBaby, FaChartBar, FaSignOutAlt,
-  FaFileContract, FaRedoAlt, FaCoins, FaCog, FaChevronLeft, FaChevronRight
+  FaFileContract, FaRedoAlt, FaCog, FaChevronLeft, FaChevronRight, FaTimes, FaBars
 } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import api from '../utils/api';
-import { toast } from 'react-toastify';
 import './Sidebar.css';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [currencies, setCurrencies] = useState([]);
-  const [preferredCurrency, setPreferredCurrency] = useState(user?.preferredCurrency || 'INR');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -29,37 +25,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchCurrencies();
-    }
-  }, [isAuthenticated]);
-
-  const fetchCurrencies = async () => {
-    try {
-      const response = await api.get('/currencies');
-      setCurrencies(response.data.currencies || []);
-    } catch (error) {
-      console.error('Error fetching currencies');
-    }
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleCurrencyChange = async (currencyCode) => {
-    try {
-      await api.put('/auth/preferred-currency', { preferredCurrency: currencyCode });
-      setPreferredCurrency(currencyCode);
-      // Update user in localStorage
-      const updatedUser = { ...user, preferredCurrency: currencyCode };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      toast.success('Preferred currency updated');
-    } catch (error) {
-      toast.error('Error updating preferred currency');
-    }
   };
 
   const navLinks = [
@@ -68,7 +36,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { path: '/milk/production', label: 'Milk Production', icon: <FaTint /> },
     { path: '/milk/sales', label: 'Milk Sales', icon: <FaMoneyBillWave /> },
     { path: '/contracts', label: 'Contracts', icon: <FaFileContract /> },
-    { path: '/currencies', label: 'Currencies', icon: <FaCoins /> },
     { path: '/expenses', label: 'Expenses', icon: <FaMoneyBillWave /> },
     { path: '/recurring-expenses', label: 'Recurring Expenses', icon: <FaRedoAlt /> },
     { path: '/vaccinations', label: 'Vaccinations', icon: <FaSyringe /> },
@@ -89,17 +56,21 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
 
   return (
     <>
-      {/* Mobile Hamburger Button - Always Visible */}
+      {/* Mobile Header Bar - Fixed at top */}
       {isMobile && (
-        <button
-          className="mobile-hamburger-btn"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          aria-label="Toggle menu"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <div className="mobile-header-bar">
+          <button
+            className="mobile-hamburger-btn"
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMobileOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+          </button>
+          <Link to="/" className="mobile-brand" onClick={handleLinkClick}>
+            <span className="brand-icon">🐄</span>
+            <span className="brand-text">Dairy Farm Manager</span>
+          </Link>
+        </div>
       )}
 
       {/* Mobile Backdrop */}
@@ -111,24 +82,26 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       )}
 
       <div className={`sidebar bg-white shadow-sm border-end ${isCollapsed ? 'collapsed' : ''} ${isMobile ? (isMobileOpen ? 'mobile-open' : 'mobile-closed') : ''}`} style={{
-        width: isMobile ? '280px' : (isCollapsed ? '70px' : '280px'),
-        minHeight: '100vh',
+        width: isMobile ? '280px' : (isCollapsed ? '70px' : '260px'),
+        minHeight: isMobile ? 'calc(100vh - 56px)' : '100vh',
         position: 'fixed',
         left: 0,
-        top: 0,
+        top: isMobile ? '56px' : 0,
         zIndex: 1040,
         transition: 'all 0.3s ease',
-        transform: isMobile ? (isMobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)'
+        transform: isMobile ? (isMobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-      {/* Header */}
-      <div className="sidebar-header p-3 border-bottom d-flex align-items-center justify-content-between">
-        {!isCollapsed && (
-          <Link to="/" className="d-flex align-items-center text-primary fw-bold text-decoration-none" onClick={handleLinkClick}>
-            <span className="me-2">🐄</span>
-            <span>Dairy Farm Manager</span>
-          </Link>
-        )}
-        {!isMobile && (
+      {/* Header - Desktop Only */}
+      {!isMobile && (
+        <div className="sidebar-header p-3 border-bottom d-flex align-items-center justify-content-between">
+          {!isCollapsed && (
+            <Link to="/" className="d-flex align-items-center text-primary fw-bold text-decoration-none" onClick={handleLinkClick}>
+              <span className="me-2">🐄</span>
+              <span>Dairy Farm Manager</span>
+            </Link>
+          )}
           <button
             className="btn btn-sm btn-outline-secondary border-0"
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -136,76 +109,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
           >
             {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
           </button>
-        )}
-      </div>
-
-      {/* Currency Selector */}
-      <div className="p-3 border-bottom">
-        {isCollapsed ? (
-          <div className="dropdown">
-            <button
-              className="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-center"
-              type="button"
-              id="currencyDropdownCollapsed"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-              title="Select Currency"
-            >
-              <FaCoins />
-            </button>
-            <ul className="dropdown-menu" aria-labelledby="currencyDropdownCollapsed">
-              {currencies.map(currency => (
-                <li key={currency.code}>
-                  <button
-                    className={`dropdown-item d-flex align-items-center ${
-                      currency.code === preferredCurrency ? 'active' : ''
-                    }`}
-                    onClick={() => handleCurrencyChange(currency.code)}
-                  >
-                    <span className="me-2">{currency.symbol}</span>
-                    {currency.name} ({currency.code})
-                    {currency.isDefault && <span className="badge bg-primary ms-2">Default</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <div className="dropdown">
-            <button
-              className="btn btn-outline-secondary dropdown-toggle w-100 d-flex align-items-center justify-content-between"
-              type="button"
-              id="currencyDropdown"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <div className="d-flex align-items-center">
-                <FaCoins className="me-2" />
-                <span>{currencies.find(c => c.code === preferredCurrency)?.symbol || 'Rs '} {preferredCurrency}</span>
-              </div>
-            </button>
-            <ul className="dropdown-menu w-100" aria-labelledby="currencyDropdown">
-              {currencies.map(currency => (
-                <li key={currency.code}>
-                  <button
-                    className={`dropdown-item d-flex align-items-center ${
-                      currency.code === preferredCurrency ? 'active' : ''
-                    }`}
-                    onClick={() => handleCurrencyChange(currency.code)}
-                  >
-                    <span className="me-2">{currency.symbol}</span>
-                    {currency.name} ({currency.code})
-                    {currency.isDefault && <span className="badge bg-primary ms-2">Default</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Navigation Links */}
-      <nav className="sidebar-nav p-2">
+      <nav className="sidebar-nav p-2 flex-grow-1 overflow-auto">
         <ul className="list-unstyled">
           {navLinks.map(link => (
             <li key={link.path} className="mb-1">
@@ -214,76 +122,34 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
                 className={`nav-link d-flex align-items-center px-3 py-2 rounded ${
                   location.pathname === link.path ? 'active bg-primary text-white' : 'text-muted'
                 }`}
-                title={isCollapsed ? link.label : ''}
+                title={isCollapsed && !isMobile ? link.label : ''}
                 onClick={handleLinkClick}
               >
-                <span className="me-3">{link.icon}</span>
-                {!isCollapsed && <span>{link.label}</span>}
+                <span className="nav-icon me-3">{link.icon}</span>
+                {(!isCollapsed || isMobile) && <span>{link.label}</span>}
               </Link>
             </li>
           ))}
         </ul>
       </nav>
 
-      {/* User Info & Logout */}
-      <div className="sidebar-footer mt-auto p-3 border-top">
-        {isCollapsed ? (
-          <div className="dropdown">
-            <button
-              className="btn btn-outline-primary btn-sm w-100 d-flex justify-content-center"
-              type="button"
-              id="userDropdownCollapsed"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-              title="User Menu"
-            >
-              <FaCog />
-            </button>
-            <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownCollapsed">
-              <li>
-                <h6 className="dropdown-header">{user?.name}</h6>
-              </li>
-              <li>
-                <span className="dropdown-item-text small text-muted">{user?.email}</span>
-              </li>
-              <li><hr className="dropdown-divider" /></li>
-              <li>
-                <button className="dropdown-item text-danger d-flex align-items-center" onClick={handleLogout}>
-                  <FaSignOutAlt className="me-2" />
-                  Logout
-                </button>
-              </li>
-            </ul>
-          </div>
-        ) : (
-          <div className="dropdown">
-            <button
-              className="btn btn-outline-primary dropdown-toggle w-100 d-flex align-items-center"
-              type="button"
-              id="userDropdown"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <FaCog className="me-2" />
-              <span className="text-truncate">{user?.farmName}</span>
-            </button>
-            <ul className="dropdown-menu dropdown-menu-end w-100" aria-labelledby="userDropdown">
-              <li>
-                <h6 className="dropdown-header">{user?.name}</h6>
-              </li>
-              <li>
-                <span className="dropdown-item-text small text-muted">{user?.email}</span>
-              </li>
-              <li><hr className="dropdown-divider" /></li>
-              <li>
-                <button className="dropdown-item text-danger d-flex align-items-center" onClick={handleLogout}>
-                  <FaSignOutAlt className="me-2" />
-                  Logout
-                </button>
-              </li>
-            </ul>
-          </div>
-        )}
+      {/* User Info & Logout - Always visible at bottom */}
+      <div className="sidebar-footer p-3 border-top">
+        <div className="user-info mb-2">
+          {(!isCollapsed || isMobile) && (
+            <>
+              <div className="user-name fw-bold text-dark small">{user?.name}</div>
+              <div className="farm-name text-muted" style={{ fontSize: '0.75rem' }}>{user?.farmName}</div>
+            </>
+          )}
+        </div>
+        <button
+          className={`btn btn-danger w-100 d-flex align-items-center ${isCollapsed && !isMobile ? 'justify-content-center' : ''}`}
+          onClick={handleLogout}
+        >
+          <FaSignOutAlt className={(!isCollapsed || isMobile) ? 'me-2' : ''} />
+          {(!isCollapsed || isMobile) && <span>Sign Out</span>}
+        </button>
       </div>
     </div>
     </>

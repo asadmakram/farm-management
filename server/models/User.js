@@ -32,9 +32,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  businessStartDate: {
+    type: Date,
+    default: null
+  },
   preferredCurrency: {
     type: String,
-    default: 'INR',
+    default: 'PKR',
     uppercase: true
   },
   preferredLanguage: {

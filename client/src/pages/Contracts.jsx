@@ -114,95 +114,87 @@ function Contracts() {
 
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title">📋 Bandhi Contracts</h1>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <FaPlus /> Add Contract
+          <FaPlus /> <span className="btn-text">Add Contract</span>
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-3 mb-3">
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Active Contracts</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
-            {summary.active || 0}
-          </p>
+      <div className="summary-grid summary-grid-3 mb-3">
+        <div className="summary-card">
+          <h4>Active Contracts</h4>
+          <p className="summary-value primary">{summary.active || 0}</p>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Advance Held</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning-color)' }}>
-            Rs {(summary.totalAdvanceHeld || 0).toFixed(2)}
-          </p>
+        <div className="summary-card">
+          <h4>Advance Held</h4>
+          <p className="summary-value warning">Rs {(summary.totalAdvanceHeld || 0).toFixed(0)}</p>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Advance Returned</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success-color)' }}>
-            Rs {(summary.totalAdvanceReturned || 0).toFixed(2)}
-          </p>
+        <div className="summary-card">
+          <h4>Advance Returned</h4>
+          <p className="summary-value success">Rs {(summary.totalAdvanceReturned || 0).toFixed(0)}</p>
         </div>
       </div>
 
       {/* Contracts Table */}
-      <div className="table-container">
-        <table>
+      <div className="table-responsive">
+        <table className="data-table">
           <thead>
             <tr>
-              <th>Vendor Name</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Rate/Liter</th>
-              <th>Advance Amount</th>
+              <th>Vendor</th>
+              <th className="hide-mobile">Start</th>
+              <th className="hide-mobile">End</th>
+              <th className="text-right">Rate</th>
+              <th className="text-right">Advance</th>
               <th>Status</th>
-              <th>Advance Status</th>
-              <th>Actions</th>
+              <th className="hide-tablet">Advance</th>
+              <th style={{ width: '90px' }}></th>
             </tr>
           </thead>
           <tbody>
             {contracts.map(contract => (
               <tr key={contract._id}>
-                <td><strong>{contract.vendorName}</strong></td>
-                <td>{new Date(contract.startDate).toLocaleDateString()}</td>
-                <td>{new Date(contract.endDate).toLocaleDateString()}</td>
-                <td>Rs {contract.ratePerLiter.toFixed(2)}</td>
-                <td>Rs {contract.advanceAmount.toFixed(2)}</td>
-                <td>
-                  <span className={`status-badge ${contract.status}`}>
+                <td data-label="Vendor"><strong>{contract.vendorName}</strong></td>
+                <td data-label="Start" className="hide-mobile">{new Date(contract.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                <td data-label="End" className="hide-mobile">{new Date(contract.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                <td data-label="Rate" className="text-right">Rs {contract.ratePerLiter.toFixed(0)}</td>
+                <td data-label="Advance" className="text-right">Rs {contract.advanceAmount.toFixed(0)}</td>
+                <td data-label="Status">
+                  <span className={`badge badge-${contract.status === 'active' ? 'success' : contract.status === 'completed' ? 'info' : 'danger'}`}>
                     {contract.status}
                   </span>
                 </td>
-                <td>
-                  <span className={`status-badge ${contract.advanceStatus}`}>
+                <td data-label="Advance Status" className="hide-tablet">
+                  <span className={`badge badge-${contract.advanceStatus === 'held' ? 'warning' : 'success'}`}>
                     {contract.advanceStatus}
                   </span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <div className="table-actions">
                     <button 
-                      className="btn btn-sm btn-outline"
-                      style={{ color: 'var(--primary-color)', borderColor: 'var(--primary-color)' }}
+                      className="btn-icon-only primary"
                       onClick={() => handleEdit(contract)}
-                      title="Edit Contract"
+                      title="Edit"
                     >
-                      <FaEdit />
+                      <FaEdit size={14} />
                     </button>
                     {contract.advanceStatus === 'held' && contract.status === 'active' && (
                       <button 
-                        className="btn btn-sm btn-outline"
-                        style={{ color: 'var(--success-color)', borderColor: 'var(--success-color)' }}
+                        className="btn-icon-only"
+                        style={{ color: '#10b981' }}
                         onClick={() => handleReturnAdvance(contract._id)}
-                        title="Return Advance & Complete Contract"
+                        title="Return Advance"
                       >
-                        <FaCheckCircle />
+                        <FaCheckCircle size={14} />
                       </button>
                     )}
                     <button 
-                      className="btn btn-sm btn-outline"
-                      style={{ color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}
+                      className="btn-icon-only danger"
                       onClick={() => handleDeleteClick(contract)}
-                      title="Delete Contract"
+                      title="Delete"
                     >
-                      <FaTrash />
+                      <FaTrash size={14} />
                     </button>
                   </div>
                 </td>

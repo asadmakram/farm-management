@@ -164,39 +164,47 @@ const MilkProduction = () => {
 
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><FaTint /> Milk Production</h1>
         <button className="btn btn-primary" onClick={() => openModal()}>
-          <FaPlus /> Add Record
+          <FaPlus /> <span className="btn-text">Add Record</span>
         </button>
       </div>
 
       {records.length > 0 ? (
-        <div className="table-container">
-          <table>
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Animal</th>
-                <th>Morning (L)</th>
-                <th>Evening (L)</th>
-                <th>Total (L)</th>
-                <th>Quality</th>
-                <th>Actions</th>
+                <th className="text-right">Morning</th>
+                <th className="text-right">Evening</th>
+                <th className="text-right">Total</th>
+                <th className="hide-mobile">Quality</th>
+                <th style={{ width: '50px' }}></th>
               </tr>
             </thead>
             <tbody>
               {records.map(record => (
                 <tr key={record._id}>
-                  <td data-label="Date">{new Date(record.date).toLocaleDateString()}</td>
+                  <td data-label="Date">{new Date(record.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
                   <td data-label="Animal">{record.animalId?.tagNumber || 'N/A'}</td>
-                  <td data-label="Morning">{record.morningYield}</td>
-                  <td data-label="Evening">{record.eveningYield}</td>
-                  <td data-label="Total"><strong>{record.totalYield}</strong></td>
-                  <td data-label="Quality"><span className={`status-badge ${record.quality}`}>{record.quality}</span></td>
-                  <td data-label="Actions">
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(record._id)}>
-                      <FaTrash />
+                  <td data-label="Morning" className="text-right">{record.morningYield}L</td>
+                  <td data-label="Evening" className="text-right">{record.eveningYield}L</td>
+                  <td data-label="Total" className="text-right"><strong>{record.totalYield}L</strong></td>
+                  <td data-label="Quality" className="hide-mobile">
+                    <span className={`badge badge-${record.quality === 'excellent' ? 'success' : record.quality === 'good' ? 'info' : 'warning'}`}>
+                      {record.quality}
+                    </span>
+                  </td>
+                  <td>
+                    <button 
+                      className="btn-icon-only danger" 
+                      onClick={() => handleDelete(record._id)}
+                      title="Delete record"
+                    >
+                      <FaTrash size={14} />
                     </button>
                   </td>
                 </tr>

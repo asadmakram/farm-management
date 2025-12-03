@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBaby, FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaBaby, FaPlus, FaEdit, FaTrash, FaMars, FaVenus, FaWeight } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -91,57 +91,124 @@ const Calves = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this calf?')) {
+      try {
+        await api.delete(`/calves/${id}`);
+        toast.success('Calf deleted successfully');
+        fetchCalves();
+      } catch (error) {
+        toast.error('Error deleting calf');
+      }
+    }
+  };
+
   if (loading) return <div className="container mt-3">Loading...</div>;
+
+  const maleCount = calves.filter(c => c.gender === 'male').length;
+  const femaleCount = calves.filter(c => c.gender === 'female').length;
+  const avgWeight = calves.length > 0 ? calves.reduce((sum, c) => sum + (c.birthWeight || 0), 0) / calves.length : 0;
 
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><FaBaby /> Calves</h1>
         <button className="btn btn-primary" onClick={() => openModal()}>
-          <FaPlus /> Add Calf
+          <FaPlus /> <span className="hide-mobile">Add Calf</span>
         </button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="summary-grid">
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+            <FaBaby />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Total Calves</span>
+            <span className="summary-value">{calves.length}</span>
+            <span className="summary-sub">All recorded</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: '#5b9bd5' }}>
+            <FaMars />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Male</span>
+            <span className="summary-value">{maleCount}</span>
+            <span className="summary-sub">Bull calves</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: '#e91e8c' }}>
+            <FaVenus />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Female</span>
+            <span className="summary-value">{femaleCount}</span>
+            <span className="summary-sub">Heifer calves</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Avg Weight Card */}
+      <div className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '1rem', opacity: 0.9 }}>Average Birth Weight</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{avgWeight.toFixed(1)} kg</span>
+        </div>
+      </div>
+
       {calves.length > 0 ? (
-        <div className="grid grid-3">
-          {calves.map(calf => (
-            <div key={calf._id} className="card">
-              <div className="animal-header">
-                <h3>{calf.animalId?.tagNumber || 'N/A'}</h3>
-                <span className={`status-badge ${calf.status}`}>{calf.status}</span>
-              </div>
-              <div className="animal-details">
-                <p><strong>Mother:</strong> {calf.motherId?.tagNumber || 'N/A'}</p>
-                <p><strong>Gender:</strong> {calf.gender}</p>
-                <p><strong>Birth Date:</strong> {new Date(calf.birthDate).toLocaleDateString()}</p>
-                <p><strong>Birth Weight:</strong> {calf.birthWeight} kg</p>
-                <p><strong>Age:</strong> {Math.floor((new Date() - new Date(calf.birthDate)) / (1000 * 60 * 60 * 24))} days</p>
-              </div>
-              <div className="card-actions">
-                <button className="btn btn-outline btn-sm" onClick={() => openModal(calf)}>
-                  <FaEdit /> Edit
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={async () => {
-                  if (window.confirm('Are you sure you want to delete this calf?')) {
-                    try {
-                      await api.delete(`/calves/${calf._id}`);
-                      toast.success('Calf deleted successfully');
-                      fetchCalves();
-                    } catch (error) {
-                      toast.error('Error deleting calf');
-                    }
-                  }
-                }}>
-                  <FaTrash /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Calf Tag</th>
+                <th className="hide-mobile">Mother</th>
+                <th>Gender</th>
+                <th className="hide-tablet">Birth Date</th>
+                <th className="hide-tablet">Weight</th>
+                <th>Age</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calves.map(calf => (
+                <tr key={calf._id}>
+                  <td><strong>{calf.animalId?.tagNumber || 'N/A'}</strong></td>
+                  <td className="hide-mobile">{calf.motherId?.tagNumber || 'N/A'}</td>
+                  <td>
+                    <span className={`badge ${calf.gender === 'male' ? 'badge-primary' : 'badge-danger'}`}>
+                      {calf.gender === 'male' ? <FaMars /> : <FaVenus />} {calf.gender}
+                    </span>
+                  </td>
+                  <td className="hide-tablet">{new Date(calf.birthDate).toLocaleDateString()}</td>
+                  <td className="hide-tablet">{calf.birthWeight} kg</td>
+                  <td>{Math.floor((new Date() - new Date(calf.birthDate)) / (1000 * 60 * 60 * 24))} days</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button className="btn-icon-only btn-primary" onClick={() => openModal(calf)} title="Edit">
+                        <FaEdit />
+                      </button>
+                      <button className="btn-icon-only btn-danger" onClick={() => handleDelete(calf._id)} title="Delete">
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="empty-state">
           <FaBaby size={48} />
           <p>No calves recorded yet</p>
+          <button className="btn btn-primary" onClick={() => openModal()}>
+            <FaPlus /> Add First Calf
+          </button>
         </div>
       )}
 

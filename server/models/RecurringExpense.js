@@ -32,7 +32,7 @@ const recurringExpenseSchema = new mongoose.Schema({
   },
   frequency: {
     type: String,
-    enum: ['daily', '10_days', 'monthly'],
+    enum: ['daily', 'weekly', '10_days', 'monthly'],
     default: '10_days'
   },
   lastPurchaseDate: {
@@ -73,6 +73,9 @@ recurringExpenseSchema.pre('save', function(next) {
     switch(this.frequency) {
       case 'daily':
         this.nextPurchaseDate = new Date(lastDate.setDate(lastDate.getDate() + 1));
+        break;
+      case 'weekly':
+        this.nextPurchaseDate = new Date(lastDate.setDate(lastDate.getDate() + 7));
         break;
       case '10_days':
         this.nextPurchaseDate = new Date(lastDate.setDate(lastDate.getDate() + 10));

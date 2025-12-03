@@ -159,6 +159,7 @@ router.get('/me', auth, async (req, res) => {
         preferredLanguage: req.user.preferredLanguage,
         country: req.user.country,
         city: req.user.city,
+        businessStartDate: req.user.businessStartDate,
         subscription: req.user.subscription
       }
     });
@@ -324,13 +325,14 @@ router.put('/language', auth, async (req, res) => {
 // @access  Private
 router.put('/settings', auth, async (req, res) => {
   try {
-    const { preferredCurrency, preferredLanguage, country, city } = req.body;
+    const { preferredCurrency, preferredLanguage, country, city, businessStartDate } = req.body;
 
     const updateData = {};
     if (preferredCurrency !== undefined) updateData.preferredCurrency = preferredCurrency;
     if (preferredLanguage !== undefined) updateData.preferredLanguage = preferredLanguage.toLowerCase();
     if (country !== undefined) updateData.country = country;
     if (city !== undefined) updateData.city = city;
+    if (businessStartDate !== undefined) updateData.businessStartDate = businessStartDate ? new Date(businessStartDate) : null;
 
     // Update user
     const user = await User.findByIdAndUpdate(
@@ -360,6 +362,7 @@ router.put('/settings', auth, async (req, res) => {
         preferredLanguage: user.preferredLanguage,
         country: user.country,
         city: user.city,
+        businessStartDate: user.businessStartDate,
         subscription: user.subscription
       }
     });

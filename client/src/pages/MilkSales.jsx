@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FaPlus, FaMoneyBillWave, FaWallet } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaPlus, FaMoneyBillWave, FaWallet, FaFilter, FaTimes, FaSearch, FaCalendarAlt } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -7,7 +7,6 @@ import './PageStyles.css';
 const MilkSales = () => {
   const [sales, setSales] = useState([]);
   const [contracts, setContracts] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
   const [showPaymentAllocationModal, setShowPaymentAllocationModal] = useState(false);
   const [paymentAllocationData, setPaymentAllocationData] = useState({
     customerName: '',
@@ -17,6 +16,20 @@ const MilkSales = () => {
   });
   const [uniqueCustomers, setUniqueCustomers] = useState([]);
   const [paymentPreview, setPaymentPreview] = useState([]);
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const customerInputRef = useRef(null);
+  const dropdownRef = useRef(null);
+  
+  // Month/Year filter state
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  
   const defaultSummary = {
     totalQuantity: 0,
     totalRevenue: 0,
@@ -41,20 +54,32 @@ const MilkSales = () => {
     customerName: '',
     ratePerLiter: '',
     paymentStatus: 'pending',
-    currency: 'INR',
-    exchangeRate: 1,
     notes: ''
   });
 
   useEffect(() => {
     fetchSales();
     fetchContracts();
-    fetchCurrencies();
+  }, [filterMonth, filterYear]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchSales = async () => {
     try {
-      const response = await api.get('/milk/sales');
+      // Calculate start and end dates for the selected month/year
+      const startDate = new Date(filterYear, filterMonth, 1);
+      const endDate = new Date(filterYear, filterMonth + 1, 0); // Last day of month
+      
+      const response = await api.get(`/milk/sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
       const salesData = response.data.data || [];
       setSales(salesData);
       setSummary(response.data.summary || defaultSummary);
@@ -81,16 +106,6 @@ const MilkSales = () => {
     } catch (error) {
       console.error('Error fetching contracts');
       setContracts([]);
-    }
-  };
-
-  const fetchCurrencies = async () => {
-    try {
-      const response = await api.get('/currencies');
-      setCurrencies(response.data.currencies || []);
-    } catch (error) {
-      console.error('Error fetching currencies');
-      setCurrencies([]);
     }
   };
 
@@ -255,10 +270,9 @@ const MilkSales = () => {
       customerName: '',
       ratePerLiter: '',
       paymentStatus: 'pending',
-      currency: 'INR',
-      exchangeRate: 1,
       notes: ''
     });
+    setCustomerSearch('');
   };
 
   const handleSaleTypeChange = (type) => {
@@ -269,160 +283,205 @@ const MilkSales = () => {
     });
   };
 
-  const handleCurrencyChange = (currencyCode) => {
-    const selectedCurrency = currencies.find(c => c.code === currencyCode);
-    setFormData({
-      ...formData,
-      currency: currencyCode,
-      exchangeRate: selectedCurrency ? selectedCurrency.exchangeRate : 1
-    });
+  // Customer autocomplete filtered list
+  const filteredCustomerList = uniqueCustomers.filter(customer =>
+    customer.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  const handleCustomerSelect = (customer) => {
+    setFormData({ ...formData, customerName: customer });
+    setCustomerSearch(customer);
+    setShowCustomerDropdown(false);
   };
 
-  const filteredSales = filterType === 'all' 
-    ? (sales || [])
-    : (sales || []).filter(sale => sale.saleType === filterType);
+  const handleCustomerInputChange = (value) => {
+    setCustomerSearch(value);
+    setFormData({ ...formData, customerName: value });
+    setShowCustomerDropdown(true);
+  };
+
+  // Filtered sales based on all filters
+  const filteredSales = (sales || []).filter(sale => {
+    // Sale type filter
+    if (filterType !== 'all' && sale.saleType !== filterType) return false;
+    
+    // Customer filter
+    if (customerFilter) {
+      const saleCustomer = sale.customerName || sale.contractId?.vendorName || '';
+      if (!saleCustomer.toLowerCase().includes(customerFilter.toLowerCase())) return false;
+    }
+    
+    // Payment status filter
+    if (paymentStatusFilter !== 'all' && sale.paymentStatus !== paymentStatusFilter) return false;
+    
+    return true;
+  });
 
   if (loading) return <div className="container mt-3">Loading...</div>;
 
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><FaMoneyBillWave /> Milk Sales</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-outline" style={{ color: 'var(--success-color)', borderColor: 'var(--success-color)' }} onClick={() => setShowPaymentAllocationModal(true)}>
-            <FaWallet /> Receive Payment
+        <div className="header-actions">
+          <button className="btn btn-outline btn-success-outline" onClick={() => setShowPaymentAllocationModal(true)}>
+            <FaWallet /> <span className="btn-text">Receive Payment</span>
           </button>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <FaPlus /> Add Sale
+            <FaPlus /> <span className="btn-text">Add Sale</span>
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-4 mb-3">
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Bandhi (Contract)</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
-            {summary.bandhi?.quantity || 0}L
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.bandhi?.revenue || 0).toFixed(2)}</small>
+      <div className="summary-grid mb-3">
+        <div className="summary-card">
+          <h4>Bandhi (Contract)</h4>
+          <p className="summary-value primary">{summary.bandhi?.quantity || 0}L</p>
+          <small>Rs {(summary.bandhi?.revenue || 0).toFixed(0)}</small>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Mandi (Market)</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--warning-color)' }}>
-            {summary.mandi?.quantity || 0}L
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.mandi?.revenue || 0).toFixed(2)}</small>
+        <div className="summary-card">
+          <h4>Mandi (Market)</h4>
+          <p className="summary-value warning">{summary.mandi?.quantity || 0}L</p>
+          <small>Rs {(summary.mandi?.revenue || 0).toFixed(0)}</small>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Door-to-Door</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success-color)' }}>
-            {summary.door_to_door?.quantity || 0}L
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Rs {(summary.door_to_door?.revenue || 0).toFixed(2)}</small>
+        <div className="summary-card">
+          <h4>Door-to-Door</h4>
+          <p className="summary-value success">{summary.door_to_door?.quantity || 0}L</p>
+          <small>Rs {(summary.door_to_door?.revenue || 0).toFixed(0)}</small>
         </div>
-        <div className="card" style={{ padding: '1rem' }}>
-          <h4 style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Total Revenue</h4>
-          <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-            Rs {(summary.totalRevenue || 0).toFixed(2)}
-          </p>
-          <small style={{ color: 'var(--text-secondary)' }}>Pending: Rs {(summary.pending || 0).toFixed(2)}</small>
+        <div className="summary-card">
+          <h4>Total Revenue</h4>
+          <p className="summary-value">Rs {(summary.totalRevenue || 0).toFixed(0)}</p>
+          <small>Pending: Rs {(summary.pending || 0).toFixed(0)}</small>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <button 
-          className={`btn ${filterType === 'all' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setFilterType('all')}
-        >
-          All Sales
-        </button>
-        <button 
-          className={`btn ${filterType === 'bandhi' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setFilterType('bandhi')}
-        >
-          Bandhi
-        </button>
-        <button 
-          className={`btn ${filterType === 'mandi' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setFilterType('mandi')}
-        >
-          Mandi
-        </button>
-        <button 
-          className={`btn ${filterType === 'door_to_door' ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setFilterType('door_to_door')}
-        >
-          Door-to-Door
-        </button>
+      {/* Month/Year Filter Bar */}
+      <div className="filters-section mb-3" style={{ justifyContent: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <FaCalendarAlt style={{ color: 'var(--primary-color)' }} />
+          <select
+            className="filter-select"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+            style={{ minWidth: '80px' }}
+          >
+            {months.map((month, index) => (
+              <option key={index} value={index}>{month}</option>
+            ))}
+          </select>
+          <select
+            className="filter-select"
+            value={filterYear}
+            onChange={(e) => setFilterYear(parseInt(e.target.value))}
+            style={{ minWidth: '80px' }}
+          >
+            {years.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Filters Section */}
+      <div className="filters-section mb-3">
+        {/* Sale Type Tabs */}
+        <div className="filter-tabs">
+          {['all', 'bandhi', 'mandi', 'door_to_door'].map(type => (
+            <button 
+              key={type}
+              className={`filter-tab ${filterType === type ? 'active' : ''}`}
+              onClick={() => setFilterType(type)}
+            >
+              {type === 'all' ? 'All' : type === 'bandhi' ? 'Bandhi' : type === 'mandi' ? 'Mandi' : 'D2D'}
+            </button>
+          ))}
+        </div>
+        
+        {/* Customer & Payment Status Filters */}
+        <div className="filter-controls">
+          <div className="filter-group">
+            <FaSearch className="filter-icon" />
+            <input
+              type="text"
+              className="filter-input"
+              placeholder="Filter by customer..."
+              value={customerFilter}
+              onChange={e => setCustomerFilter(e.target.value)}
+            />
+            {customerFilter && (
+              <button className="filter-clear" onClick={() => setCustomerFilter('')}>
+                <FaTimes />
+              </button>
+            )}
+          </div>
+          <select
+            className="filter-select"
+            value={paymentStatusFilter}
+            onChange={e => setPaymentStatusFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+            <option value="received">Received</option>
+          </select>
+        </div>
       </div>
 
       {/* Sales Table */}
       {filteredSales.length > 0 ? (
-        <div className="table-container">
-          <table>
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
-                <th className="text-left">Date</th>
-                <th className="text-left">Sale Type</th>
-                <th className="text-left">Customer/Vendor</th>
-                <th className="text-center">Time</th>
-                <th className="text-right">Quantity (L)</th>
-                <th className="text-right">Rate/L</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Customer</th>
+                <th className="hide-mobile">Time</th>
+                <th className="text-right">Qty (L)</th>
+                <th className="text-right hide-tablet">Rate</th>
                 <th className="text-right">Total</th>
-                <th className="text-right">Paid</th>
+                <th className="text-right hide-tablet">Paid</th>
                 <th className="text-right">Pending</th>
-                <th className="text-center">Payment Status</th>
-                <th className="text-center">Notes</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredSales.map(sale => (
                 <tr key={sale._id}>
-                  <td data-label="Date" className="text-left">{new Date(sale.date).toLocaleDateString()}</td>
-                  <td data-label="Sale Type" className="text-left">
-                    <span className={`status-badge ${sale.saleType}`}>
-                      {sale.saleType === 'bandhi' ? '📋 Bandhi' : 
-                       sale.saleType === 'mandi' ? '🏪 Mandi' : 
-                       '🚪 Door-to-Door'}
+                  <td data-label="Date">{new Date(sale.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                  <td data-label="Type">
+                    <span className={`badge badge-${sale.saleType}`}>
+                      {sale.saleType === 'bandhi' ? '📋' : sale.saleType === 'mandi' ? '🏪' : '🚪'}
                     </span>
                   </td>
-                  <td data-label="Customer/Vendor" className="text-left">
-                    {sale.contractId?.vendorName || sale.customerName || 'N/A'}
+                  <td data-label="Customer">
+                    {sale.contractId?.vendorName || sale.customerName || '-'}
                   </td>
-                  <td data-label="Time" className="text-center">
+                  <td data-label="Time" className="hide-mobile">
                     {(sale.saleType === 'mandi' || sale.saleType === 'bandhi') && sale.timeOfDay ? (
-                      <span className={`status-badge ${sale.timeOfDay}`}>
-                        {sale.timeOfDay === 'morning' ? '🌅 Morning' : '🌆 Evening'}
-                      </span>
+                      sale.timeOfDay === 'morning' ? '🌅' : '🌆'
                     ) : '-'}
                   </td>
-                  <td data-label="Quantity" className="text-right">{sale.quantity}</td>
-                  <td data-label="Rate/L" className="text-right">{sale.currency} {sale.ratePerLiter.toFixed(2)}</td>
-                  <td data-label="Total" className="text-right"><strong>{sale.currency} {sale.totalAmount.toFixed(2)}</strong></td>
-                  <td data-label="Paid" className="text-right" style={{ color: 'var(--success-color)' }}>
-                    {sale.currency} {(sale.amountPaid || 0).toFixed(2)}
+                  <td data-label="Qty" className="text-right">{sale.quantity}</td>
+                  <td data-label="Rate" className="text-right hide-tablet">Rs {sale.ratePerLiter?.toFixed(0)}</td>
+                  <td data-label="Total" className="text-right"><strong>Rs {sale.totalAmount?.toFixed(0)}</strong></td>
+                  <td data-label="Paid" className="text-right hide-tablet text-success">Rs {(sale.amountPaid || 0).toFixed(0)}</td>
+                  <td data-label="Pending" className="text-right" style={{ color: sale.amountPending > 0 ? 'var(--danger-color)' : 'inherit' }}>
+                    Rs {(sale.amountPending || 0).toFixed(0)}
                   </td>
-                  <td data-label="Pending" className="text-right" style={{ color: sale.amountPending > 0 ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
-                    {sale.currency} {(sale.amountPending || 0).toFixed(2)}
-                  </td>
-                  <td data-label="Payment" className="text-center">
+                  <td data-label="Status">
                     <select 
-                      className={`status-select ${sale.paymentStatus}`}
+                      className={`status-select-compact ${sale.paymentStatus}`}
                       value={sale.paymentStatus}
                       onChange={(e) => updatePaymentStatus(sale._id, e.target.value)}
                     >
-                      <option value="pending">Pending</option>
-                      <option value="partial">Partial</option>
-                      <option value="received">Received</option>
-                      <option value="returned">Returned</option>
+                      <option value="pending">⏳</option>
+                      <option value="partial">◐</option>
+                      <option value="received">✅</option>
+                      <option value="returned">↩️</option>
                     </select>
-                  </td>
-                  <td data-label="Notes" className="text-center">
-                    {sale.notes && (
-                      <small title={sale.notes}>📝</small>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -439,7 +498,7 @@ const MilkSales = () => {
       {/* Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Record Milk Sale</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>&times;</button>
@@ -483,47 +542,6 @@ const MilkSales = () => {
                       />
                       <span>🚪 Door-to-Door</span>
                     </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Currency Selection */}
-              <div className="form-section">
-                <div className="form-section-title">
-                  <span>💱</span>
-                  <span>Currency</span>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">💱 Currency *</label>
-                    <select
-                      className="form-select"
-                      value={formData.currency}
-                      onChange={(e) => handleCurrencyChange(e.target.value)}
-                      required
-                    >
-                      <option value="">Select currency</option>
-                      {currencies.map(currency => (
-                        <option key={currency.code} value={currency.code}>
-                          {currency.symbol} {currency.name} ({currency.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">📊 Exchange Rate (to INR)</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={formData.exchangeRate}
-                      onChange={e => setFormData({...formData, exchangeRate: parseFloat(e.target.value) || 1})}
-                      placeholder="1.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                      1 {formData.currency} = {formData.exchangeRate} INR
-                    </small>
                   </div>
                 </div>
               </div>
@@ -643,18 +661,42 @@ const MilkSales = () => {
                       />
                     </div>
                   </div>
-                  <div className="form-group">
+                  {/* Customer with Autocomplete */}
+                  <div className="form-group" ref={dropdownRef}>
                     <label className="form-label">👤 Customer Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.customerName}
-                      onChange={e => setFormData({...formData, customerName: e.target.value})}
-                      placeholder="Enter customer name"
-                    />
+                    <div className="autocomplete-wrapper">
+                      <input
+                        type="text"
+                        className="form-input"
+                        ref={customerInputRef}
+                        value={customerSearch}
+                        onChange={e => handleCustomerInputChange(e.target.value)}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        placeholder="Type or select customer name"
+                      />
+                      {showCustomerDropdown && (customerSearch || uniqueCustomers.length > 0) && (
+                        <div className="autocomplete-dropdown">
+                          {filteredCustomerList.length > 0 ? (
+                            filteredCustomerList.map((customer, idx) => (
+                              <div
+                                key={idx}
+                                className="autocomplete-item"
+                                onClick={() => handleCustomerSelect(customer)}
+                              >
+                                {customer}
+                              </div>
+                            ))
+                          ) : customerSearch && (
+                            <div className="autocomplete-item new-customer" onClick={() => handleCustomerSelect(customerSearch)}>
+                              <FaPlus size={12} /> Add "{customerSearch}" as new customer
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="info-box" style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)', border: '1px solid #0284c7', borderRadius: '0.5rem', padding: '1rem', margin: '1rem 0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#0284c7', marginBottom: '0.5rem' }}>
+                  <div className="info-box info-box-primary">
+                    <div className="info-box-title">
                       <span>💰</span>
                       <span>Total Rate Calculation</span>
                     </div>
@@ -674,16 +716,38 @@ const MilkSales = () => {
                   <span>📋</span>
                   <span>Additional Details</span>
                 </div>
-                {formData.saleType !== 'bandhi' && (
-                  <div className="form-group">
+                {formData.saleType !== 'bandhi' && formData.saleType !== 'door_to_door' && (
+                  <div className="form-group" ref={dropdownRef}>
                     <label className="form-label">👤 Customer Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.customerName}
-                      onChange={e => setFormData({...formData, customerName: e.target.value})}
-                      placeholder="Enter customer name"
-                    />
+                    <div className="autocomplete-wrapper">
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={customerSearch}
+                        onChange={e => handleCustomerInputChange(e.target.value)}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        placeholder="Type or select customer name"
+                      />
+                      {showCustomerDropdown && (customerSearch || uniqueCustomers.length > 0) && (
+                        <div className="autocomplete-dropdown">
+                          {filteredCustomerList.length > 0 ? (
+                            filteredCustomerList.map((customer, idx) => (
+                              <div
+                                key={idx}
+                                className="autocomplete-item"
+                                onClick={() => handleCustomerSelect(customer)}
+                              >
+                                {customer}
+                              </div>
+                            ))
+                          ) : customerSearch && (
+                            <div className="autocomplete-item new-customer" onClick={() => handleCustomerSelect(customerSearch)}>
+                              <FaPlus size={12} /> Add "{customerSearch}" as new customer
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

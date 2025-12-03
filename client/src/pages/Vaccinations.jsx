@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlus, FaSyringe } from 'react-icons/fa';
+import { FaPlus, FaSyringe, FaCalendarCheck, FaMoneyBillWave, FaTrash } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -59,39 +59,104 @@ const Vaccinations = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this vaccination record?')) {
+      try {
+        await api.delete(`/vaccinations/${id}`);
+        toast.success('Vaccination record deleted');
+        fetchData();
+      } catch (error) {
+        toast.error('Error deleting vaccination');
+      }
+    }
+  };
+
   if (loading) return <div className="container mt-3">Loading...</div>;
+
+  const totalCost = vaccinations.reduce((sum, v) => sum + (v.cost || 0), 0);
+  const upcomingDue = vaccinations.filter(v => v.nextDueDate && new Date(v.nextDueDate) > new Date() && new Date(v.nextDueDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length;
 
   return (
     <div className="container mt-3">
-      <div className="flex-between mb-3">
+      <div className="page-header-mobile">
         <h1 className="page-title"><FaSyringe /> Vaccinations</h1>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <FaPlus /> Add Vaccination
+          <FaPlus /> <span className="hide-mobile">Add</span>
         </button>
       </div>
 
+      {/* Summary Cards */}
+      <div className="summary-grid">
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+            <FaSyringe />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Total Records</span>
+            <span className="summary-value">{vaccinations.length}</span>
+            <span className="summary-sub">All vaccinations</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--warning-color)' }}>
+            <FaCalendarCheck />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Due Soon</span>
+            <span className="summary-value">{upcomingDue}</span>
+            <span className="summary-sub">Next 30 days</span>
+          </div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-icon" style={{ background: 'var(--danger-color)' }}>
+            <FaMoneyBillWave />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Total Cost</span>
+            <span className="summary-value">Rs {totalCost.toLocaleString()}</span>
+            <span className="summary-sub">All time</span>
+          </div>
+        </div>
+      </div>
+
       {vaccinations.length > 0 ? (
-        <div className="table-container">
-          <table>
+        <div className="table-responsive">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Animal</th>
                 <th>Vaccine</th>
-                <th>Date Administered</th>
-                <th>Next Due Date</th>
-                <th>Veterinarian</th>
+                <th className="hide-mobile">Date</th>
+                <th className="hide-tablet">Next Due</th>
+                <th className="hide-tablet">Vet</th>
                 <th>Cost</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {vaccinations.map(vacc => (
                 <tr key={vacc._id}>
-                  <td data-label="Animal">{vacc.animalId?.tagNumber || 'N/A'}</td>
-                  <td data-label="Vaccine"><strong>{vacc.vaccineName}</strong></td>
-                  <td data-label="Date Administered">{new Date(vacc.dateAdministered).toLocaleDateString()}</td>
-                  <td data-label="Next Due">{vacc.nextDueDate ? new Date(vacc.nextDueDate).toLocaleDateString() : 'N/A'}</td>
-                  <td data-label="Veterinarian">{vacc.veterinarian || 'N/A'}</td>
-                  <td data-label="Cost">Rs {Number(vacc.cost || 0).toFixed(2)}</td>
+                  <td><strong>{vacc.animalId?.tagNumber || 'N/A'}</strong></td>
+                  <td>{vacc.vaccineName}</td>
+                  <td className="hide-mobile">{new Date(vacc.dateAdministered).toLocaleDateString()}</td>
+                  <td className="hide-tablet">
+                    {vacc.nextDueDate ? (
+                      <span className={new Date(vacc.nextDueDate) < new Date() ? 'text-danger' : ''}>
+                        {new Date(vacc.nextDueDate).toLocaleDateString()}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td className="hide-tablet">{vacc.veterinarian || '-'}</td>
+                  <td>Rs {Number(vacc.cost || 0).toLocaleString()}</td>
+                  <td>
+                    <button 
+                      className="btn-icon-only btn-danger"
+                      onClick={() => handleDelete(vacc._id)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

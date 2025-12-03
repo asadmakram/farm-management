@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { FaTint, FaMoneyBillWave, FaChartLine, FaCalendarAlt } from 'react-icons/fa';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { FaTint, FaMoneyBillWave, FaChartLine, FaCalendarAlt, FaUsers, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
 import api from '../utils/api';
 import './Dashboard.css';
 
-const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -42,7 +42,12 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <div className="container mt-3">Loading dashboard...</div>;
+    return (
+      <div className="dashboard-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+    );
   }
 
   if (!dashboardData) {
@@ -63,7 +68,7 @@ const Dashboard = () => {
   }));
 
   const salesData = Object.keys(sales.salesByType || {}).map(type => ({
-    name: type.charAt(0).toUpperCase() + type.slice(1),
+    name: type === 'door_to_door' ? 'D2D' : type.charAt(0).toUpperCase() + type.slice(1),
     revenue: sales.salesByType[type].revenue
   }));
 
@@ -82,28 +87,29 @@ const Dashboard = () => {
   })) || [];
 
   return (
-    <div className="container mt-3">
-      <div className="flex-between mb-3">
-        <h1 className="page-title">Dashboard</h1>
+    <div className="dashboard-container">
+      {/* Header with Filter */}
+      <div className="dashboard-header">
+        <div className="header-content">
+          <h1 className="dashboard-title">📊 Dashboard</h1>
+          <p className="dashboard-subtitle">Overview for {months[filterMonth]} {filterYear}</p>
+        </div>
         
-        {/* Month/Year Filter */}
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <FaCalendarAlt color="#6b7280" />
+        <div className="filter-bar">
+          <FaCalendarAlt className="filter-icon-inline" />
           <select 
-            className="form-select" 
+            className="filter-select-inline" 
             value={filterMonth} 
             onChange={(e) => setFilterMonth(parseInt(e.target.value))}
-            style={{ minWidth: '120px' }}
           >
             {months.map((month, index) => (
               <option key={index} value={index}>{month}</option>
             ))}
           </select>
           <select 
-            className="form-select" 
+            className="filter-select-inline" 
             value={filterYear} 
             onChange={(e) => setFilterYear(parseInt(e.target.value))}
-            style={{ minWidth: '90px' }}
           >
             {years.map(year => (
               <option key={year} value={year}>{year}</option>
@@ -112,216 +118,231 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-4">
-        <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#dbeafe' }}>
-            <GiCow color="#2563eb" />
+      {/* Summary Stats Grid */}
+      <div className="stats-grid">
+        <div className="stat-card stat-card-primary">
+          <div className="stat-card-icon">
+            <GiCow />
           </div>
-          <div className="stat-content">
-            <h3>{animals.total}</h3>
-            <p>Total Animals</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#d1fae5' }}>
-            <FaTint color="#10b981" />
-          </div>
-          <div className="stat-content">
-            <h3>{Number(milk.todayYield || 0).toFixed(2)} L</h3>
-            <p>Today's Milk Yield</p>
-            <span className={`stat-trend ${Number(milk.yieldTrend || 0) >= 0 ? 'positive' : 'negative'}`}>
-              {Number(milk.yieldTrend || 0) >= 0 ? '↑' : '↓'} {Number(Math.abs(milk.yieldTrend || 0)).toFixed(1)}%
-            </span>
+          <div className="stat-card-content">
+            <span className="stat-label">Total Animals</span>
+            <span className="stat-value">{animals.total}</span>
+            <div className="stat-breakdown">
+              <span>🐂 {animals.male} Male</span>
+              <span>🐄 {animals.female} Female</span>
+            </div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#fef3c7' }}>
-            <FaMoneyBillWave color="#f59e0b" />
+        <div className="stat-card stat-card-success">
+          <div className="stat-card-icon">
+            <FaTint />
           </div>
-          <div className="stat-content">
-            <h3>Rs {Number(sales.monthRevenue || 0).toFixed(2)}</h3>
-            <p>Month Revenue</p>
-            <span className={`stat-trend ${Number(sales.revenueTrend || 0) >= 0 ? 'positive' : 'negative'}`}>
-              {Number(sales.revenueTrend || 0) >= 0 ? '↑' : '↓'} {Number(Math.abs(sales.revenueTrend || 0)).toFixed(1)}%
-            </span>
+          <div className="stat-card-content">
+            <span className="stat-label">Today's Milk</span>
+            <span className="stat-value">{Number(milk.todayYield || 0).toFixed(1)} L</span>
+            <div className="stat-trend-badge">
+              {Number(milk.yieldTrend || 0) >= 0 ? (
+                <span className="trend-up"><FaArrowUp /> {Number(milk.yieldTrend || 0).toFixed(1)}%</span>
+              ) : (
+                <span className="trend-down"><FaArrowDown /> {Number(Math.abs(milk.yieldTrend || 0)).toFixed(1)}%</span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: profitLoss.status === 'profit' ? '#d1fae5' : '#fee2e2' }}>
-            <FaChartLine color={profitLoss.status === 'profit' ? '#10b981' : '#ef4444'} />
+        <div className="stat-card stat-card-warning">
+          <div className="stat-card-icon">
+            <FaMoneyBillWave />
           </div>
-          <div className="stat-content">
-            <h3>Rs {Number(profitLoss.monthProfit || 0).toFixed(2)}</h3>
-            <p>Monthly {profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</p>
-            <span className="stat-badge">{profitLoss.profitMargin}% margin</span>
+          <div className="stat-card-content">
+            <span className="stat-label">Month Revenue</span>
+            <span className="stat-value">Rs {Number(sales.monthRevenue || 0).toFixed(0)}</span>
+            <div className="stat-trend-badge">
+              {Number(sales.revenueTrend || 0) >= 0 ? (
+                <span className="trend-up"><FaArrowUp /> {Number(sales.revenueTrend || 0).toFixed(1)}%</span>
+              ) : (
+                <span className="trend-down"><FaArrowDown /> {Number(Math.abs(sales.revenueTrend || 0)).toFixed(1)}%</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className={`stat-card ${profitLoss.status === 'profit' ? 'stat-card-profit' : 'stat-card-loss'}`}>
+          <div className="stat-card-icon">
+            <FaChartLine />
+          </div>
+          <div className="stat-card-content">
+            <span className="stat-label">Monthly {profitLoss.status === 'profit' ? 'Profit' : 'Loss'}</span>
+            <span className="stat-value">Rs {Number(Math.abs(profitLoss.monthProfit) || 0).toFixed(0)}</span>
+            <span className="stat-margin">{profitLoss.profitMargin}% margin</span>
           </div>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-2">
+      {/* Charts Section */}
+      <div className="charts-grid">
         {/* Weekly Milk Production Trend */}
-        <div className="card">
-          <h3 className="card-title">Weekly Milk Production</h3>
+        <div className="chart-card">
+          <h3 className="chart-title">📈 Milk Production Trend</h3>
           {weeklyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="yield" stroke="#2563eb" strokeWidth={2} name="Yield (L)" />
-              </LineChart>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={weeklyData}>
+                <defs>
+                  <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Area type="monotone" dataKey="yield" stroke="#3b82f6" strokeWidth={3} fill="url(#colorYield)" name="Yield (L)" />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center">No data available</p>
+            <div className="chart-empty">No data available</div>
           )}
         </div>
 
-        {/* Animal Distribution */}
-        <div className="card">
-          <h3 className="card-title">Animal Distribution</h3>
-          {animals.total > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+        {/* Sales Distribution */}
+        <div className="chart-card">
+          <h3 className="chart-title">💰 Sales by Type</h3>
+          {salesData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={salesData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#9ca3af" width={60} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`Rs ${value.toFixed(0)}`, 'Revenue']}
+                />
+                <Bar dataKey="revenue" fill="#10b981" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="chart-empty">No sales recorded</div>
+          )}
+        </div>
+      </div>
+
+      {/* Customer Sales Section */}
+      <div className="customer-sales-section">
+        <div className="section-header">
+          <h3 className="section-title">
+            <FaUsers className="section-icon" />
+            Sales per Customer
+          </h3>
+          <span className="section-period">{filterInfo?.monthName || months[filterMonth]} {filterYear}</span>
+        </div>
+        
+        {customerSalesData.length > 0 ? (
+          <div className="customer-cards-grid">
+            {customerSalesData.map((customer, index) => (
+              <div key={index} className="customer-card">
+                <div className="customer-header">
+                  <span className="customer-avatar">{customer.name.charAt(0).toUpperCase()}</span>
+                  <span className="customer-name">{customer.name}</span>
+                </div>
+                <div className="customer-stats">
+                  <div className="customer-stat">
+                    <span className="stat-icon">🥛</span>
+                    <span className="stat-value">{customer.quantity.toFixed(0)}L</span>
+                  </div>
+                  <div className="customer-stat">
+                    <span className="stat-icon">💰</span>
+                    <span className="stat-value">Rs {customer.revenue.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div className="customer-payment">
+                  <div className="payment-bar">
+                    <div 
+                      className="payment-progress" 
+                      style={{ width: `${customer.revenue > 0 ? (customer.received / customer.revenue) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                  <div className="payment-info">
+                    <span className="received">✅ Rs {customer.received.toFixed(0)}</span>
+                    {customer.pending > 0 && (
+                      <span className="pending">⏳ Rs {customer.pending.toFixed(0)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-customers">No customer sales data available</div>
+        )}
+      </div>
+
+      {/* Bottom Section - More Charts and Alerts */}
+      <div className="bottom-grid">
+        {/* Expenses by Category */}
+        <div className="chart-card">
+          <h3 className="chart-title">📊 Expenses Breakdown</h3>
+          {expenseData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={animalData}
+                  data={expenseData}
                   cx="50%"
                   cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="amount"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
                 >
-                  {animalData.map((entry, index) => (
+                  {expenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`Rs ${value.toFixed(0)}`, 'Amount']}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center">No animals added yet</p>
+            <div className="chart-empty">No expenses recorded</div>
           )}
         </div>
 
-        {/* Expenses by Category */}
-        <div className="card">
-          <h3 className="card-title">Monthly Expenses by Category</h3>
-          {expenseData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={expenseData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="amount" fill="#f59e0b" name="Amount (Rs )" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-center">No expenses recorded</p>
-          )}
-        </div>
-
-        {/* Sales by Customer Type */}
-        <div className="card">
-          <h3 className="card-title">Sales Distribution</h3>
-          {salesData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="revenue" fill="#10b981" name="Revenue (Rs )" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-center">No sales recorded</p>
-          )}
-        </div>
-      </div>
-
-      {/* Sales by Customer with Received Amount */}
-      <div className="card mb-3">
-        <h3 className="card-title">Sales per Customer ({filterInfo?.monthName || months[filterMonth]} {filterYear})</h3>
-        {customerSalesData.length > 0 ? (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th className="text-left">Customer</th>
-                  <th className="text-right">Quantity (L)</th>
-                  <th className="text-right">Total Revenue</th>
-                  <th className="text-right">Received</th>
-                  <th className="text-right">Pending</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerSalesData.map((customer, index) => (
-                  <tr key={index}>
-                    <td className="text-left">{customer.name}</td>
-                    <td className="text-right">{customer.quantity.toFixed(1)} L</td>
-                    <td className="text-right">Rs {customer.revenue.toFixed(2)}</td>
-                    <td className="text-right" style={{ color: 'var(--success-color)' }}>Rs {customer.received.toFixed(2)}</td>
-                    <td className="text-right" style={{ color: customer.pending > 0 ? 'var(--danger-color)' : 'var(--text-secondary)' }}>
-                      Rs {customer.pending.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-center">No customer sales data available</p>
-        )}
-      </div>
-
-      {/* Alerts and Recent Activity */}
-      <div className="grid grid-2">
-        {dashboardData.alerts?.upcomingVaccinations?.length > 0 && (
-          <div className="card">
-            <h3 className="card-title">Upcoming Vaccinations</h3>
-            <div className="alert-list">
-              {dashboardData.alerts.upcomingVaccinations
-                .filter(vacc => vacc.animalId) // Filter out entries with null animalId
-                .map(vacc => (
-                <div key={vacc._id} className="alert-item">
-                  <strong>{vacc.animalId?.tagNumber || 'Unknown'}</strong> - {vacc.vaccineName}
-                  <span className="alert-date">
-                    {new Date(vacc.nextDueDate).toLocaleDateString()}
-                  </span>
+        {/* Alerts */}
+        <div className="alerts-card">
+          <h3 className="chart-title">🔔 Alerts & Activity</h3>
+          <div className="alerts-list">
+            {dashboardData.alerts?.upcomingVaccinations?.filter(v => v.animalId).slice(0, 3).map(vacc => (
+              <div key={vacc._id} className="alert-item vaccination">
+                <span className="alert-emoji">💉</span>
+                <div className="alert-content">
+                  <span className="alert-title">{vacc.animalId?.tagNumber}</span>
+                  <span className="alert-desc">{vacc.vaccineName}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {dashboardData.alerts?.recentCalves?.length > 0 && (
-          <div className="card">
-            <h3 className="card-title">Recent Calves</h3>
-            <div className="alert-list">
-              {dashboardData.alerts.recentCalves
-                .filter(calf => calf.animalId) // Filter out entries with null animalId
-                .map(calf => (
-                <div key={calf._id} className="alert-item">
-                  <strong>{calf.animalId?.tagNumber || 'Unknown'}</strong> - {calf.gender}
-                  <span className="alert-date">
-                    Birth Weight: {calf.birthWeight} kg
-                  </span>
+                <span className="alert-date">{new Date(vacc.nextDueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+              </div>
+            ))}
+            {dashboardData.alerts?.recentCalves?.filter(c => c.animalId).slice(0, 3).map(calf => (
+              <div key={calf._id} className="alert-item calf">
+                <span className="alert-emoji">🐮</span>
+                <div className="alert-content">
+                  <span className="alert-title">{calf.animalId?.tagNumber}</span>
+                  <span className="alert-desc">{calf.gender} - {calf.birthWeight}kg</span>
                 </div>
-              ))}
-            </div>
+                <span className="alert-badge">New</span>
+              </div>
+            ))}
+            {(!dashboardData.alerts?.upcomingVaccinations?.length && !dashboardData.alerts?.recentCalves?.length) && (
+              <div className="no-alerts">No pending alerts 🎉</div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

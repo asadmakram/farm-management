@@ -333,6 +333,41 @@ router.put('/sales/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
 
+    // If payment status is being changed to pending, clear all payments
+    if (req.body.paymentStatus === 'pending') {
+      sale.payments = [];
+      sale.amountPaid = 0;
+      sale.amountPending = sale.totalAmount;
+      sale.paymentStatus = 'pending';
+      await sale.save();
+      
+      return res.json({ 
+        success: true, 
+        message: 'Payment reverted to pending', 
+        data: sale 
+      });
+    }
+
+    // If payment status is being changed to received, mark full payment
+    if (req.body.paymentStatus === 'received' && sale.paymentStatus !== 'received') {
+      const pendingAmount = sale.totalAmount - (sale.amountPaid || 0);
+      if (pendingAmount > 0) {
+        sale.payments.push({
+          amount: pendingAmount,
+          date: new Date(),
+          paymentMethod: 'cash',
+          notes: 'Marked as fully paid'
+        });
+        await sale.save();
+        
+        return res.json({ 
+          success: true, 
+          message: 'Sale marked as fully paid', 
+          data: sale 
+        });
+      }
+    }
+
     sale = await MilkSale.findByIdAndUpdate(
       req.params.id,
       req.body,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSync, FaCalendarAlt } from 'react-icons/fa';
 import './PageStyles.css';
 
 const EXPENSE_TYPES = [
@@ -116,6 +116,7 @@ function RecurringExpenses() {
   const getFrequencyLabel = (freq) => {
     switch(freq) {
       case 'daily': return 'Daily';
+      case 'weekly': return 'Weekly';
       case '10_days': return 'Every 10 Days';
       case 'monthly': return 'Monthly';
       default: return freq;
@@ -126,6 +127,7 @@ function RecurringExpenses() {
     const totalAmount = frequency === 'worker_wage' ? amount * workerCount : amount;
     switch(frequency) {
       case 'daily': return totalAmount * 30;
+      case 'weekly': return totalAmount * 4;
       case '10_days': return totalAmount * 3;
       case 'monthly': return totalAmount;
       default: return 0;
@@ -133,42 +135,50 @@ function RecurringExpenses() {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>🔄 Recurring Expenses</h1>
-        <button className="btn-primary" onClick={() => {
+    <div className="container mt-3">
+      <div className="page-header-mobile">
+        <h1 className="page-title"><FaSync /> Recurring Expenses</h1>
+        <button className="btn btn-primary" onClick={() => {
           setEditingExpense(null);
           resetForm();
           setShowModal(true);
         }}>
-          <FaPlus /> Add Recurring Expense
+          <FaPlus /> <span className="hide-mobile">Add</span>
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="summary-cards">
+      <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <div className="summary-card">
-          <h3>Active Expenses</h3>
-          <p className="summary-value">{summary.totalActive}</p>
+          <div className="summary-icon" style={{ background: 'var(--primary-color)' }}>
+            <FaSync />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Active Expenses</span>
+            <span className="summary-value">{summary.totalActive}</span>
+          </div>
         </div>
         <div className="summary-card">
-          <h3>Estimated Monthly Cost</h3>
-          <p className="summary-value">Rs {summary.estimatedMonthly.toFixed(2)}</p>
+          <div className="summary-icon" style={{ background: 'var(--success-color)' }}>
+            <FaCalendarAlt />
+          </div>
+          <div className="summary-content">
+            <span className="summary-label">Monthly Est.</span>
+            <span className="summary-value">Rs {summary.estimatedMonthly.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
       {/* Expenses Table */}
-      <div className="table-container">
+      <div className="table-responsive">
         <table className="data-table">
           <thead>
             <tr>
               <th>Expense Type</th>
-              <th>Description</th>
-              <th>Amount</th>
+              <th className="hide-mobile">Amount</th>
               <th>Frequency</th>
-              <th>Monthly Est.</th>
-              <th>Last Purchase</th>
-              <th>Next Purchase</th>
+              <th className="hide-tablet">Monthly Est.</th>
+              <th className="hide-tablet">Next Purchase</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -179,19 +189,20 @@ function RecurringExpenses() {
                 <td>
                   <strong>{EXPENSE_TYPES.find(t => t.value === expense.expenseType)?.label || expense.expenseType}</strong>
                   {expense.expenseType === 'worker_wage' && expense.workerCount > 1 && (
-                    <small> ({expense.workerCount} workers)</small>
+                    <small style={{ display: 'block', color: 'var(--text-secondary)' }}>({expense.workerCount} workers)</small>
                   )}
+                  <span className="show-mobile" style={{ display: 'none', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    Rs {expense.amount.toLocaleString()}
+                  </span>
                 </td>
-                <td>{expense.description || '-'}</td>
-                <td>Rs {expense.amount.toFixed(2)}</td>
+                <td className="hide-mobile">Rs {expense.amount.toLocaleString()}</td>
                 <td>
-                  <span className="status-badge">{getFrequencyLabel(expense.frequency)}</span>
+                  <span className="badge badge-secondary">{getFrequencyLabel(expense.frequency)}</span>
                 </td>
-                <td>
-                  <strong>Rs {calculateMonthlyAmount(expense.amount, expense.frequency, expense.workerCount).toFixed(2)}</strong>
+                <td className="hide-tablet">
+                  <strong>Rs {calculateMonthlyAmount(expense.amount, expense.frequency, expense.workerCount).toLocaleString()}</strong>
                 </td>
-                <td>{new Date(expense.lastPurchaseDate).toLocaleDateString()}</td>
-                <td>
+                <td className="hide-tablet">
                   {expense.nextPurchaseDate ? (
                     <span className={new Date(expense.nextPurchaseDate) < new Date() ? 'text-danger' : ''}>
                       {new Date(expense.nextPurchaseDate).toLocaleDateString()}
@@ -199,31 +210,47 @@ function RecurringExpenses() {
                   ) : '-'}
                 </td>
                 <td>
-                  <span className={`status-badge ${expense.isActive ? 'active' : 'inactive'}`}>
+                  <span className={`badge ${expense.isActive ? 'badge-success' : 'badge-secondary'}`}>
                     {expense.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td>
-                  <button 
-                    className="btn-icon" 
-                    onClick={() => handleEdit(expense)}
-                    title="Edit"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button 
-                    className="btn-icon danger" 
-                    onClick={() => handleDelete(expense._id)}
-                    title="Delete"
-                  >
-                    <FaTrash />
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <button 
+                      className="btn-icon-only btn-primary" 
+                      onClick={() => handleEdit(expense)}
+                      title="Edit"
+                    >
+                      <FaEdit />
+                    </button>
+                    <button 
+                      className="btn-icon-only btn-danger" 
+                      onClick={() => handleDelete(expense._id)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {expenses.length === 0 && (
+        <div className="empty-state">
+          <FaSync size={48} />
+          <p>No recurring expenses set up yet</p>
+          <button className="btn btn-primary" onClick={() => {
+            setEditingExpense(null);
+            resetForm();
+            setShowModal(true);
+          }}>
+            <FaPlus /> Add First Recurring Expense
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -232,11 +259,18 @@ function RecurringExpenses() {
           setEditingExpense(null);
         }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingExpense ? 'Edit' : 'Add'} Recurring Expense</h2>
+            <div className="modal-header">
+              <h2>{editingExpense ? 'Edit' : 'Add'} Recurring Expense</h2>
+              <button className="modal-close" onClick={() => {
+                setShowModal(false);
+                setEditingExpense(null);
+              }}>&times;</button>
+            </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Expense Type *</label>
+                <label className="form-label">Expense Type *</label>
                 <select
+                  className="form-select"
                   name="expenseType"
                   value={formData.expenseType}
                   onChange={handleChange}
@@ -251,9 +285,10 @@ function RecurringExpenses() {
               </div>
 
               <div className="form-group">
-                <label>Description</label>
+                <label className="form-label">Description</label>
                 <input
                   type="text"
+                  className="form-input"
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
@@ -263,25 +298,29 @@ function RecurringExpenses() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Amount *</label>
+                  <label className="form-label">Amount *</label>
                   <input
                     type="number"
                     step="0.01"
+                    className="form-input"
                     name="amount"
                     value={formData.amount}
                     onChange={handleChange}
                     required
+                    placeholder="0.00"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Frequency *</label>
+                  <label className="form-label">Frequency *</label>
                   <select
+                    className="form-select"
                     name="frequency"
                     value={formData.frequency}
                     onChange={handleChange}
                     required
                   >
                     <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
                     <option value="10_days">Every 10 Days</option>
                     <option value="monthly">Monthly</option>
                   </select>
@@ -290,10 +329,11 @@ function RecurringExpenses() {
 
               {formData.expenseType === 'worker_wage' && (
                 <div className="form-group">
-                  <label>Number of Workers *</label>
+                  <label className="form-label">Number of Workers *</label>
                   <input
                     type="number"
                     min="1"
+                    className="form-input"
                     name="workerCount"
                     value={formData.workerCount}
                     onChange={handleChange}
@@ -303,9 +343,10 @@ function RecurringExpenses() {
               )}
 
               <div className="form-group">
-                <label>Last Purchase Date *</label>
+                <label className="form-label">Last Purchase Date *</label>
                 <input
                   type="date"
+                  className="form-input"
                   name="lastPurchaseDate"
                   value={formData.lastPurchaseDate}
                   onChange={handleChange}
@@ -314,45 +355,48 @@ function RecurringExpenses() {
               </div>
 
               <div className="form-group">
-                <label className="checkbox-label">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     name="isActive"
                     checked={formData.isActive}
                     onChange={handleChange}
+                    style={{ width: 'auto' }}
                   />
                   <span>Active</span>
                 </label>
               </div>
 
               <div className="form-group">
-                <label>Notes</label>
+                <label className="form-label">Notes</label>
                 <textarea
+                  className="form-textarea"
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
                   rows="3"
+                  placeholder="Additional notes..."
                 />
               </div>
 
-              <div className="info-box">
-                <strong>Estimated Monthly Cost:</strong> Rs 
+              <div className="card" style={{ padding: '0.75rem', marginBottom: '1rem', background: 'var(--bg-light)' }}>
+                <strong>Estimated Monthly Cost:</strong> Rs{' '}
                 {calculateMonthlyAmount(
                   parseFloat(formData.amount || 0), 
                   formData.frequency,
                   parseInt(formData.workerCount || 1)
-                ).toFixed(2)}
+                ).toLocaleString()}
               </div>
 
               <div className="modal-actions">
-                <button type="submit" className="btn-primary">
-                  {editingExpense ? 'Update' : 'Add'} Expense
-                </button>
-                <button type="button" className="btn-secondary" onClick={() => {
+                <button type="button" className="btn btn-outline" onClick={() => {
                   setShowModal(false);
                   setEditingExpense(null);
                 }}>
                   Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  {editingExpense ? 'Update' : 'Add'} Expense
                 </button>
               </div>
             </form>

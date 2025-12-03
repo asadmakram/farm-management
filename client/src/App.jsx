@@ -23,7 +23,6 @@ import Calves from './pages/Calves.jsx';
 import Reports from './pages/Reports.jsx';
 import Contracts from './pages/Contracts.jsx';
 import RecurringExpenses from './pages/RecurringExpenses.jsx';
-import Currencies from './pages/Currencies.jsx';
 import Settings from './pages/Settings.jsx';
 
 function App() {
@@ -58,7 +57,6 @@ function App() {
                 <Route path="/milk/production" element={<PrivateRoute><MilkProduction /></PrivateRoute>} />
                 <Route path="/milk/sales" element={<PrivateRoute><MilkSales /></PrivateRoute>} />
                 <Route path="/contracts" element={<PrivateRoute><Contracts /></PrivateRoute>} />
-                <Route path="/currencies" element={<PrivateRoute><Currencies /></PrivateRoute>} />
                 <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
                 <Route path="/recurring-expenses" element={<PrivateRoute><RecurringExpenses /></PrivateRoute>} />
                 <Route path="/vaccinations" element={<PrivateRoute><Vaccinations /></PrivateRoute>} />

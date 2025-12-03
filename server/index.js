@@ -31,7 +31,13 @@ app.use('/api/currencies', require('./routes/currencies'));
 // Serve static client in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+  
+  // Handle SPA - send index.html for all non-API routes
   app.get('*', (req, res) => {
+    // Don't serve index.html for API routes
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ success: false, message: 'API endpoint not found' });
+    }
     res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
   });
 }

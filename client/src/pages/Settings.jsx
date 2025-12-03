@@ -2,30 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../utils/api.js';
 import { toast } from 'react-toastify';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { FaCog, FaCalendarAlt, FaMapMarkerAlt, FaCity } from 'react-icons/fa';
+import './PageStyles.css';
 
 const Settings = () => {
   const { user, setUser } = useAuth();
   const [formData, setFormData] = useState({
-    preferredCurrency: user?.preferredCurrency || 'INR',
+    businessStartDate: user?.businessStartDate ? new Date(user.businessStartDate).toISOString().split('T')[0] : '',
     country: user?.country || '',
     city: user?.city || ''
   });
-  const [currencies, setCurrencies] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetchCurrencies();
-  }, []);
-
-  const fetchCurrencies = async () => {
-    try {
-      const response = await api.get('/currencies');
-      setCurrencies(response.data.currencies || []);
-    } catch (error) {
-      console.error('Error fetching currencies');
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -52,88 +39,85 @@ const Settings = () => {
   };
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row justify-content-center">
-        <div className="col-lg-8">
-          <div className="card shadow">
-            <div className="card-header bg-primary text-white">
-              <h4 className="card-title mb-0">
-                <i className="fas fa-cog me-2"></i>
-                Settings
-              </h4>
+    <div className="container mt-3">
+      <div className="page-header-mobile">
+        <h1 className="page-title"><FaCog /> Settings</h1>
+      </div>
+
+      <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <div className="card-header" style={{ 
+          background: 'linear-gradient(135deg, var(--primary-color), var(--primary-dark))',
+          color: 'white',
+          padding: '1rem 1.5rem',
+          borderRadius: '12px 12px 0 0'
+        }}>
+          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
+            <FaCog style={{ marginRight: '0.5rem' }} />
+            Farm Settings
+          </h3>
+        </div>
+        <div style={{ padding: '1.5rem' }}>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FaCalendarAlt style={{ color: 'var(--primary-color)' }} />
+                Business Start Date
+              </label>
+              <input
+                type="date"
+                className="form-input"
+                name="businessStartDate"
+                value={formData.businessStartDate}
+                onChange={handleInputChange}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+              />
+              <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '0.5rem' }}>
+                Set this date to calculate recurring expenses only from when your business actually started.
+                This helps get accurate expense reports.
+              </small>
             </div>
-            <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="preferredCurrency" className="form-label">
-                      Preferred Currency
-                    </label>
-                    <select
-                      className="form-select"
-                      id="preferredCurrency"
-                      name="preferredCurrency"
-                      value={formData.preferredCurrency}
-                      onChange={handleInputChange}
-                    >
-                      {currencies.map(currency => (
-                        <option key={currency.code} value={currency.code}>
-                          {currency.symbol} {currency.name} ({currency.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="country" className="form-label">
-                      Country
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="country"
-                      name="country"
-                      value={formData.country}
-                      onChange={handleInputChange}
-                      placeholder="Enter your country"
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="city" className="form-label">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      placeholder="Enter your city"
-                    />
-                  </div>
-                </div>
-
-                <div className="d-flex justify-content-end">
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Updating...
-                      </>
-                    ) : (
-                      'Update Settings'
-                    )}
-                  </button>
-                </div>
-              </form>
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FaMapMarkerAlt style={{ color: 'var(--success-color)' }} />
+                Country
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+                placeholder="Enter your country"
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+              />
             </div>
-          </div>
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FaCity style={{ color: 'var(--warning-color)' }} />
+                City
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                placeholder="Enter your city"
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ width: '100%', padding: '0.875rem', fontSize: '1rem', fontWeight: '600' }}
+            >
+              {loading ? 'Updating...' : 'Update Settings'}
+            </button>
+          </form>
         </div>
       </div>
     </div>
