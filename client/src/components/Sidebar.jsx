@@ -12,12 +12,22 @@ import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './Sidebar.css';
 
-const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
+const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [currencies, setCurrencies] = useState([]);
   const [preferredCurrency, setPreferredCurrency] = useState(user?.preferredCurrency || 'INR');
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -71,31 +81,62 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     return null;
   }
 
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setIsMobileOpen(false);
+    }
+  };
+
   return (
-    <div className={`sidebar bg-white shadow-sm border-end ${isCollapsed ? 'collapsed' : ''}`} style={{
-      width: isCollapsed ? '70px' : '280px',
-      minHeight: '100vh',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      zIndex: 1000,
-      transition: 'width 0.3s ease'
-    }}>
+    <>
+      {/* Mobile Hamburger Button - Always Visible */}
+      {isMobile && (
+        <button
+          className="mobile-hamburger-btn"
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      )}
+
+      {/* Mobile Backdrop */}
+      {isMobile && isMobileOpen && (
+        <div 
+          className="mobile-sidebar-backdrop"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      <div className={`sidebar bg-white shadow-sm border-end ${isCollapsed ? 'collapsed' : ''} ${isMobile ? (isMobileOpen ? 'mobile-open' : 'mobile-closed') : ''}`} style={{
+        width: isMobile ? '280px' : (isCollapsed ? '70px' : '280px'),
+        minHeight: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 1040,
+        transition: 'all 0.3s ease',
+        transform: isMobile ? (isMobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'translateX(0)'
+      }}>
       {/* Header */}
       <div className="sidebar-header p-3 border-bottom d-flex align-items-center justify-content-between">
         {!isCollapsed && (
-          <Link to="/" className="d-flex align-items-center text-primary fw-bold text-decoration-none">
+          <Link to="/" className="d-flex align-items-center text-primary fw-bold text-decoration-none" onClick={handleLinkClick}>
             <span className="me-2">🐄</span>
-            <span className="d-none d-sm-inline">Dairy Farm Manager</span>
+            <span>Dairy Farm Manager</span>
           </Link>
         )}
-        <button
-          className="btn btn-sm btn-outline-secondary border-0"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-        </button>
+        {!isMobile && (
+          <button
+            className="btn btn-sm btn-outline-secondary border-0"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+          </button>
+        )}
       </div>
 
       {/* Currency Selector */}
@@ -174,6 +215,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                   location.pathname === link.path ? 'active bg-primary text-white' : 'text-muted'
                 }`}
                 title={isCollapsed ? link.label : ''}
+                onClick={handleLinkClick}
               >
                 <span className="me-3">{link.icon}</span>
                 {!isCollapsed && <span>{link.label}</span>}
@@ -244,6 +286,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

@@ -4,7 +4,7 @@
   flex-direction: column;
   background: #ffffff;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease;
+  transition: all 0.3s ease;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -19,6 +19,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  min-height: 60px;
 }
 
 .sidebar-nav {
@@ -33,6 +34,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.9rem;
+  min-height: 44px;
 }
 
 .sidebar-nav .nav-link:hover {
@@ -77,6 +80,7 @@
 .sidebar .me-3,
 .sidebar .me-2 {
   flex-shrink: 0;
+  font-size: 1.1rem;
 }
 
 /* Smooth transitions */
@@ -104,20 +108,173 @@
   background: #a8a8a8;
 }
 
+/* Mobile Hamburger Button - Always Visible */
+.mobile-hamburger-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1050;
+  width: 44px;
+  height: 44px;
+  background: #0d6efd;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+  transition: all 0.3s ease;
+}
+
+.mobile-hamburger-btn:hover {
+  background: #0b5ed7;
+  transform: scale(1.05);
+}
+
+.mobile-hamburger-btn:active {
+  transform: scale(0.95);
+}
+
+.mobile-hamburger-btn span {
+  width: 22px;
+  height: 2.5px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.mobile-hamburger-btn:hover span {
+  width: 26px;
+}
+
+/* Mobile Sidebar Backdrop */
+.mobile-sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1039;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
-    z-index: 1050;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    z-index: 1040;
+    width: 280px !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
   }
 
-  .sidebar.show {
+  .sidebar.mobile-closed {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.mobile-open {
     transform: translateX(0);
   }
 
+  .sidebar .sidebar-header {
+    padding: 1rem !important;
+  }
+
+  .sidebar-nav .nav-link {
+    padding: 0.875rem 1rem !important;
+    font-size: 0.95rem;
+  }
+
+  .sidebar-nav .nav-link .me-3 {
+    font-size: 1.2rem;
+    margin-right: 1rem !important;
+  }
+
+  /* Improve touch targets */
+  .dropdown .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+
+  .dropdown-item {
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Full width dropdowns on mobile */
+  .dropdown {
+    width: 100%;
+  }
+
+  .dropdown-menu {
+    width: 100%;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 240px !important;
+  }
+
+  .sidebar.collapsed {
+    width: 70px !important;
+  }
+
+  .sidebar-nav .nav-link {
+    font-size: 0.85rem;
+    padding: 0.65rem 0.85rem;
+  }
+}
+
+/* Large screens */
+@media (min-width: 1025px) {
+  .mobile-hamburger-btn {
+    display: none;
+  }
+}
+
+/* Improve button and dropdown sizing for touch */
+@media (max-width: 768px) {
+  .btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .sidebar-footer {
+    padding: 1rem !important;
+  }
+
+  .sidebar-footer .dropdown .btn {
+    width: 100%;
+    padding: 0.875rem;
+  }
+}
+
+/* Ensure proper text truncation */
+.sidebar-nav .nav-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Add padding to main content on mobile for hamburger button */
+@media (max-width: 768px) {
   .main-content {
-    margin-left: 0 !important;
+    padding-top: 60px;
   }
 }

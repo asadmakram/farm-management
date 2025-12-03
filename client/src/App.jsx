@@ -28,20 +28,27 @@ import Settings from './pages/Settings.jsx';
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
     <AuthProvider>
       <Router>
         <div className="App d-flex">
-          <Sidebar isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            setIsCollapsed={setIsSidebarCollapsed}
+            isMobileOpen={isMobileSidebarOpen}
+            setIsMobileOpen={setIsMobileSidebarOpen}
+          />
           <div
             className="main-content flex-grow-1"
             style={{
-              marginLeft: isSidebarCollapsed ? '70px' : '280px',
-              transition: 'margin-left 0.3s ease'
+              marginLeft: window.innerWidth > 768 ? (isSidebarCollapsed ? '70px' : '280px') : '0',
+              transition: 'margin-left 0.3s ease',
+              width: '100%'
             }}
           >
-            <main className="p-4">
+            <main className="p-2 p-md-4">
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />

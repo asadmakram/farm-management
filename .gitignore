@@ -38,3 +38,5 @@ web-build/
 gradle-app.setting
 !gradle-wrapper.jar
 .gradletasknamecache
+*.bson
+*.metadata.json
