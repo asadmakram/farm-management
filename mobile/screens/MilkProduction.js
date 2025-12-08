@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, Alert, ActivityIndicator, TouchableOpacity, Modal, TextInput, RefreshControl, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMilkStore } from '../stores/milkStore';
 import api from '../utils/api';
 import DatePickerInput from '../components/DatePickerInput';
 import { useTranslation } from 'react-i18next';
@@ -12,19 +14,20 @@ const { width } = Dimensions.get('window');
 
 const MilkProduction = () => {
   const insets = useSafeAreaInsets();
-  const [records, setRecords] = useState([]);
+  const { entries, loading, listByDate, upsertEntry, deleteEntry } = useMilkStore();
   const [animals, setAnimals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [mode, setMode] = useState('total-day');
   const [formData, setFormData] = useState({
     animalId: '',
     date: new Date().toISOString().split('T')[0],
-    morningYield: '',
-    eveningYield: '',
-    quality: 'good',
+    morningLiters: '',
+    morningFat: '',
+    morningSnf: '',
+    eveningLiters: '',
+    eveningFat: '',
+    eveningSnf: '',
     notes: ''
   });
   const [totalData, setTotalData] = useState({
@@ -32,66 +35,95 @@ const MilkProduction = () => {
     morningTotal: '',
     eveningTotal: ''
   });
+  const [mode, setMode] = useState('per-animal');
   const [divideEvenly, setDivideEvenly] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [farmId, setFarmId] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
   }, []);
 
   const { t } = useTranslation();
 
-  const fetchData = async () => {
+  const fetchInitialData = async () => {
     try {
-      setLoading(true);
-      const [recordsRes, animalsRes] = await Promise.all([
-        api.get('/milk/production'),
-        api.get('/animals')
+      setInitializing(true);
+      const [animalsRes] = await Promise.all([
+        api.get('/animals'),
       ]);
-      setRecords(recordsRes.data.data || []);
       setAnimals((animalsRes.data.data || []).filter(a => a.status === 'active' && a.gender === 'female'));
-      setLoading(false);
+      
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setFarmId(user.farmId);
+        await listByDate(user.farmId, new Date().toISOString().split('T')[0]);
+      }
+      setInitializing(false);
     } catch (error) {
       Alert.alert(t('common.error'), t('milk.fetchError'));
-      setLoading(false);
+      setInitializing(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    if (farmId) {
+      await listByDate(farmId, new Date().toISOString().split('T')[0]);
+    }
     setRefreshing(false);
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      if (!farmId) {
+        Alert.alert(t('common.error'), 'Farm ID not found');
+        setIsSubmitting(false);
+        return;
+      }
+
       if (mode === 'per-animal') {
-        if (!formData.animalId || (!formData.morningYield && !formData.eveningYield)) {
-          Alert.alert(t('common.error'), t('milk.selectAnimalAndYield'));
+        if (!formData.animalId || (!formData.morningLiters && !formData.eveningLiters)) {
+          Alert.alert(t('common.error'), 'Select animal and enter at least one session');
           setIsSubmitting(false);
           return;
         }
-        if (editingId) {
-          await api.put(`/milk/production/${editingId}`, formData);
-          Alert.alert(t('common.success'), t('milk.updateSuccess'));
-        } else {
-          await api.post('/milk/production', formData);
-          Alert.alert(t('common.success'), t('milk.addSuccess'));
+
+        const sessions = {};
+        if (formData.morningLiters) {
+          sessions.morning = { liters: parseFloat(formData.morningLiters) };
+          if (formData.morningFat) sessions.morning.fat = parseFloat(formData.morningFat);
+          if (formData.morningSnf) sessions.morning.snf = parseFloat(formData.morningSnf);
         }
+        if (formData.eveningLiters) {
+          sessions.evening = { liters: parseFloat(formData.eveningLiters) };
+          if (formData.eveningFat) sessions.evening.fat = parseFloat(formData.eveningFat);
+          if (formData.eveningSnf) sessions.evening.snf = parseFloat(formData.eveningSnf);
+        }
+
+        await upsertEntry({
+          farmId,
+          animalId: formData.animalId,
+          date: formData.date,
+          sessions,
+          notes: formData.notes || undefined
+        });
+        Alert.alert(t('common.success'), 'Milk entry recorded');
       } else {
         const activeAnimals = animals.filter(a => a.status === 'active' && a.gender === 'female');
         if (activeAnimals.length === 0) {
-          Alert.alert(t('common.error'), t('milk.noActiveFemale'));
+          Alert.alert(t('common.error'), 'No active animals');
           setIsSubmitting(false);
           return;
         }
-        
+
         const morning = Number(totalData.morningTotal || 0);
         const evening = Number(totalData.eveningTotal || 0);
-        
+
         if (morning === 0 && evening === 0) {
-          Alert.alert(t('common.error'), t('milk.enterAtLeastOneTotal'));
+          Alert.alert(t('common.error'), 'Enter at least one total');
           setIsSubmitting(false);
           return;
         }
@@ -100,46 +132,50 @@ const MilkProduction = () => {
           const count = activeAnimals.length;
           const perMorning = +(morning / count).toFixed(2);
           const perEvening = +(evening / count).toFixed(2);
-          
+
           for (const a of activeAnimals) {
-            await api.post('/milk/production', {
+            const sessions = {};
+            if (morning > 0) sessions.morning = { liters: perMorning };
+            if (evening > 0) sessions.evening = { liters: perEvening };
+
+            await upsertEntry({
+              farmId,
               animalId: a._id,
               date: totalData.date,
-              morningYield: perMorning,
-              eveningYield: perEvening,
-              quality: 'good',
+              sessions,
               notes: 'Auto divided from total'
             });
           }
-          Alert.alert(t('common.success'), t('milk.totalDividedSuccess'));
+          Alert.alert(t('common.success'), 'Production divided');
         }
       }
-      
-      fetchData();
+
+      await onRefresh();
       setShowModal(false);
       resetForm();
     } catch (error) {
-      Alert.alert(t('common.error'), error.response?.data?.message || t('milk.saveError'));
+      Alert.alert(t('common.error'), error.response?.data?.error || 'Failed to save');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   const handleDelete = async (id) => {
     Alert.alert(
-      t('milk.deleteConfirmTitle'),
-      t('milk.deleteConfirmMessage'),
+      'Delete Entry',
+      'Are you sure you want to delete this entry?',
       [
-        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: t('common.delete'),
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.delete(`/milk/production/${id}`);
-              Alert.alert(t('common.success'), t('milk.deleteSuccess'));
-              fetchData();
+              await deleteEntry(id);
+              Alert.alert(t('common.success'), 'Entry deleted');
+              await onRefresh();
             } catch (error) {
-              Alert.alert(t('common.error'), t('milk.deleteError'));
+              Alert.alert(t('common.error'), 'Failed to delete');
             }
           }
         }
@@ -151,9 +187,12 @@ const MilkProduction = () => {
     setFormData({
       animalId: '',
       date: new Date().toISOString().split('T')[0],
-      morningYield: '',
-      eveningYield: '',
-      quality: 'good',
+      morningLiters: '',
+      morningFat: '',
+      morningSnf: '',
+      eveningLiters: '',
+      eveningFat: '',
+      eveningSnf: '',
       notes: ''
     });
     setTotalData({
@@ -161,9 +200,8 @@ const MilkProduction = () => {
       morningTotal: '',
       eveningTotal: ''
     });
-    setMode('total-day');
+    setMode('per-animal');
     setDivideEvenly(true);
-    setEditingId(null);
   };
 
   const openModal = () => {
@@ -171,43 +209,17 @@ const MilkProduction = () => {
     setShowModal(true);
   };
 
-  const handleEdit = (item) => {
-    setEditingId(item._id);
-    setFormData({
-      animalId: item.animalId?._id || '',
-      date: item.date.split('T')[0],
-      morningYield: item.morningYield.toString(),
-      eveningYield: item.eveningYield.toString(),
-      quality: item.quality || 'good',
-      notes: item.notes || ''
-    });
-    setMode('per-animal');
-    setShowModal(true);
-  };
-
-  const getQualityColor = (quality) => {
-    switch (quality) {
-      case 'excellent': return '#22c55e';
-      case 'good': return '#3b82f6';
-      case 'average': return '#f59e0b';
-      case 'poor': return '#ef4444';
-      default: return '#94a3b8';
-    }
-  };
-
-  const getQualityGradient = (quality) => {
-    switch (quality) {
-      case 'excellent': return ['#22c55e', '#16a34a'];
-      case 'good': return ['#3b82f6', '#2563eb'];
-      case 'average': return ['#f59e0b', '#d97706'];
-      case 'poor': return ['#ef4444', '#dc2626'];
-      default: return ['#94a3b8', '#64748b'];
-    }
+  const getQualityColor = (sessions) => {
+    const total = (sessions.morning?.liters || 0) + (sessions.evening?.liters || 0);
+    if (total >= 20) return '#22c55e';
+    if (total >= 15) return '#3b82f6';
+    if (total >= 10) return '#f59e0b';
+    return '#ef4444';
   };
 
   const renderRecord = ({ item }) => (
     <View style={styles.recordCard}>
-      <View style={[styles.cardAccent, { backgroundColor: getQualityColor(item.quality) }]} />
+      <View style={[styles.cardAccent, { backgroundColor: getQualityColor(item.sessions) }]} />
       <View style={styles.cardContent}>
         <View style={styles.recordHeader}>
           <View style={styles.animalInfo}>
@@ -215,7 +227,7 @@ const MilkProduction = () => {
               <Ionicons name="paw" size={18} color="#3b82f6" />
             </View>
             <View style={styles.animalDetails}>
-              <Text style={styles.animalTag}>{item.animalId?.tagNumber || 'N/A'}</Text>
+              <Text style={styles.animalTag}>{item.animalId?.name || item.animalId}</Text>
               <View style={styles.dateContainer}>
                 <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
                 <Text style={styles.dateText}>{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</Text>
@@ -223,17 +235,6 @@ const MilkProduction = () => {
             </View>
           </View>
           <View style={styles.headerActions}>
-            <LinearGradient
-              colors={getQualityGradient(item.quality)}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.qualityBadge}
-            >
-              <Text style={styles.qualityText}>{item.quality}</Text>
-            </LinearGradient>
-            <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(item)}>
-              <Ionicons name="create-outline" size={16} color="#3b82f6" />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item._id)}>
               <Ionicons name="trash-outline" size={16} color="#ef4444" />
             </TouchableOpacity>
@@ -247,7 +248,7 @@ const MilkProduction = () => {
             </View>
             <View style={styles.yieldInfo}>
               <Text style={styles.yieldLabel}>Morning</Text>
-              <Text style={styles.yieldValue}>{item.morningYield} L</Text>
+              <Text style={styles.yieldValue}>{item.sessions.morning?.liters || '-'} L</Text>
             </View>
           </View>
           <View style={styles.yieldDivider} />
@@ -257,20 +258,20 @@ const MilkProduction = () => {
             </View>
             <View style={styles.yieldInfo}>
               <Text style={styles.yieldLabel}>Evening</Text>
-              <Text style={styles.yieldValue}>{item.eveningYield} L</Text>
+              <Text style={styles.yieldValue}>{item.sessions.evening?.liters || '-'} L</Text>
             </View>
           </View>
           <View style={styles.yieldDivider} />
           <View style={styles.totalYieldItem}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{item.totalYield} L</Text>
+            <Text style={styles.totalValue}>{item.totalLiters} L</Text>
           </View>
         </View>
       </View>
     </View>
   );
 
-  if (loading) {
+  if (initializing || loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#3b82f6" />
@@ -279,17 +280,14 @@ const MilkProduction = () => {
     );
   }
 
-  // Calculate today's total
-  const today = new Date().toISOString().split('T')[0];
-  const todayRecords = records.filter(r => r.date?.split('T')[0] === today);
-  const todayTotal = todayRecords.reduce((sum, r) => sum + (r.totalYield || 0), 0);
-  const weekRecords = records.filter(r => {
-    const recordDate = new Date(r.date);
+  const todayTotal = entries.reduce((sum, e) => sum + (e.totalLiters || 0), 0);
+  const weekRecords = entries.filter(e => {
+    const recordDate = new Date(e.date);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return recordDate >= weekAgo;
   });
-  const weekTotal = weekRecords.reduce((sum, r) => sum + (r.totalYield || 0), 0);
+  const weekTotal = weekRecords.reduce((sum, e) => sum + (e.totalLiters || 0), 0);
 
   return (
     <View style={styles.container}>
@@ -322,15 +320,15 @@ const MilkProduction = () => {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{records.length}</Text>
+            <Text style={styles.statValue}>{entries.length}</Text>
             <Text style={styles.statLabel}>{t('milk.records')}</Text>
           </View>
         </View>
       </LinearGradient>
 
-      {records.length > 0 ? (
+      {entries.length > 0 ? (
         <FlatList
-          data={records}
+          data={entries}
           renderItem={renderRecord}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
@@ -410,7 +408,7 @@ const MilkProduction = () => {
                         {animals.map(animal => (
                           <Picker.Item 
                             key={animal._id} 
-                            label={`${animal.tagNumber} - ${animal.name || animal.breed}`} 
+                            label={`${animal.name}`} 
                             value={animal._id} 
                           />
                         ))}
@@ -430,22 +428,47 @@ const MilkProduction = () => {
 
                   <View style={styles.formRow}>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>{t('milk.morning')} (L) *</Text>
+                      <Text style={styles.formLabel}>Morning Liters *</Text>
                       <TextInput
                         style={styles.formInput}
-                        value={formData.morningYield}
-                        onChangeText={(text) => setFormData({ ...formData, morningYield: text })}
+                        value={formData.morningLiters}
+                        onChangeText={(text) => setFormData({ ...formData, morningLiters: text })}
                         placeholder="0.00"
                         placeholderTextColor="#94a3b8"
                         keyboardType="decimal-pad"
                       />
                     </View>
                     <View style={styles.formGroupHalf}>
-                      <Text style={styles.formLabel}>{t('milk.evening')} (L) *</Text>
+                      <Text style={styles.formLabel}>Morning Fat %</Text>
                       <TextInput
                         style={styles.formInput}
-                        value={formData.eveningYield}
-                        onChangeText={(text) => setFormData({ ...formData, eveningYield: text })}
+                        value={formData.morningFat}
+                        onChangeText={(text) => setFormData({ ...formData, morningFat: text })}
+                        placeholder="0.00"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.formRow}>
+                    <View style={styles.formGroupHalf}>
+                      <Text style={styles.formLabel}>Evening Liters *</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={formData.eveningLiters}
+                        onChangeText={(text) => setFormData({ ...formData, eveningLiters: text })}
+                        placeholder="0.00"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={styles.formGroupHalf}>
+                      <Text style={styles.formLabel}>Evening Fat %</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={formData.eveningFat}
+                        onChangeText={(text) => setFormData({ ...formData, eveningFat: text })}
                         placeholder="0.00"
                         placeholderTextColor="#94a3b8"
                         keyboardType="decimal-pad"
@@ -504,23 +527,6 @@ const MilkProduction = () => {
               )}
 
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Quality</Text>
-                <View style={styles.qualitySelector}>
-                  {['excellent', 'good', 'average', 'poor'].map((q) => (
-                    <TouchableOpacity
-                      key={q}
-                      style={[styles.qualityOption, formData.quality === q && styles.qualityOptionActive]}
-                      onPress={() => setFormData({ ...formData, quality: q })}
-                    >
-                      <Text style={[styles.qualityOptionText, formData.quality === q && styles.qualityOptionTextActive]}>
-                        {q.charAt(0).toUpperCase() + q.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Notes</Text>
                 <TextInput
                   style={[styles.formInput, styles.textArea]}
@@ -543,7 +549,7 @@ const MilkProduction = () => {
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? 'Adding...' : 'Add Record'}</Text>
+                <Text style={styles.submitButtonText}>{isSubmitting ? 'Saving...' : 'Save Entry'}</Text>
               </TouchableOpacity>
             </View>
           </View>

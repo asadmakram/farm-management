@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaTint } from 'react-icons/fa';
 import api from '../utils/api';
+import milkApi from '../utils/milkApi';
+import { useMilkStore } from '../store/milkStore';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
 
 const MilkProduction = () => {
+  const { user } = useAuth();
+  const { entries, listByDate, upsertEntry, deleteEntry } = useMilkStore();
   const [records, setRecords] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,12 +17,15 @@ const MilkProduction = () => {
   const [formData, setFormData] = useState({
     animalId: '',
     date: new Date().toISOString().split('T')[0],
-    morningYield: '',
-    eveningYield: '',
-    quality: 'good',
+    morningLiters: '',
+    morningFat: '',
+    morningSnf: '',
+    eveningLiters: '',
+    eveningFat: '',
+    eveningSnf: '',
     notes: ''
   });
-  const [mode, setMode] = useState('per-animal'); // 'per-animal' or 'total-day'
+  const [mode, setMode] = useState('per-animal');
   const [totalData, setTotalData] = useState({ date: new Date().toISOString().split('T')[0], morningTotal: '', eveningTotal: '' });
   const [divideEvenly, setDivideEvenly] = useState(true);
   const [manualAssignments, setManualAssignments] = useState({});
@@ -30,12 +38,12 @@ const MilkProduction = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [recordsRes, animalsRes] = await Promise.all([
-        api.get('/milk/production'),
-        api.get('/animals')
+      const [animalsRes, entriesRes] = await Promise.all([
+        api.get('/animals'),
+        listByDate(user?.farmId, new Date().toISOString().split('T')[0])
       ]);
-      setRecords(recordsRes.data.data);
       setAnimals(animalsRes.data.data.filter(a => a.status === 'active' && a.gender === 'female'));
+      setRecords(entries);
       setLoading(false);
     } catch (error) {
       toast.error('Error fetching data');
@@ -48,71 +56,90 @@ const MilkProduction = () => {
     setIsSubmitting(true);
     try {
       if (mode === 'per-animal') {
-        await api.post('/milk/production', formData);
-        toast.success('Milk production record added successfully');
+        const sessions = {};
+        if (formData.morningLiters) {
+          sessions.morning = { liters: parseFloat(formData.morningLiters) };
+          if (formData.morningFat) sessions.morning.fat = parseFloat(formData.morningFat);
+          if (formData.morningSnf) sessions.morning.snf = parseFloat(formData.morningSnf);
+        }
+        if (formData.eveningLiters) {
+          sessions.evening = { liters: parseFloat(formData.eveningLiters) };
+          if (formData.eveningFat) sessions.evening.fat = parseFloat(formData.eveningFat);
+          if (formData.eveningSnf) sessions.evening.snf = parseFloat(formData.eveningSnf);
+        }
+
+        if (Object.keys(sessions).length === 0) {
+          toast.error('Please enter at least one session');
+          setIsSubmitting(false);
+          return;
+        }
+
+        await upsertEntry({
+          farmId: user?.farmId,
+          animalId: formData.animalId,
+          date: formData.date,
+          sessions,
+          notes: formData.notes || undefined
+        });
+        toast.success('Milk production record added');
       } else {
         const activeAnimals = animals.filter(a => a.status === 'active' && a.gender === 'female');
         if (activeAnimals.length === 0) {
-          toast.error('No active female animals to assign totals to');
+          toast.error('No active female animals');
+          setIsSubmitting(false);
           return;
         }
+
         if (divideEvenly) {
           const morning = Number(totalData.morningTotal || 0);
           const evening = Number(totalData.eveningTotal || 0);
           if (morning === 0 && evening === 0) {
-            toast.error('Please enter at least one total value (morning or evening)');
+            toast.error('Enter at least one total value');
+            setIsSubmitting(false);
             return;
           }
           const count = activeAnimals.length;
           const perMorning = +(morning / count).toFixed(2);
           const perEvening = +(evening / count).toFixed(2);
           for (const a of activeAnimals) {
-            await api.post('/milk/production', {
+            const sessions = {};
+            if (morning > 0) sessions.morning = { liters: perMorning };
+            if (evening > 0) sessions.evening = { liters: perEvening };
+            await upsertEntry({
+              farmId: user?.farmId,
               animalId: a._id,
               date: totalData.date,
-              morningYield: perMorning,
-              eveningYield: perEvening,
-              quality: 'good',
+              sessions,
               notes: 'Auto divided from total'
             });
           }
-          toast.success('Total production recorded and divided among animals');
+          toast.success('Production divided among animals');
         } else {
           const entries = Object.keys(manualAssignments);
           if (entries.length === 0) {
-            toast.error('No per-animal assignments provided');
+            toast.error('No assignments provided');
+            setIsSubmitting(false);
             return;
           }
-          // Optional validation: check sums if totals provided
-          const morningTotalProvided = Number(totalData.morningTotal || 0);
-          const eveningTotalProvided = Number(totalData.eveningTotal || 0);
-          if (morningTotalProvided > 0) {
-            const sumMorning = entries.reduce((s, id) => s + Number(manualAssignments[id].morning || 0), 0);
-            if (Math.abs(sumMorning - morningTotalProvided) > 0.01) {
-              toast.error('Sum of manual morning allocations does not match total morning');
-              return;
-            }
-          }
-          if (eveningTotalProvided > 0) {
-            const sumEvening = entries.reduce((s, id) => s + Number(manualAssignments[id].evening || 0), 0);
-            if (Math.abs(sumEvening - eveningTotalProvided) > 0.01) {
-              toast.error('Sum of manual evening allocations does not match total evening');
-              return;
-            }
-          }
           for (const animalId of entries) {
-            const m = Number(manualAssignments[animalId].morning || 0);
-            const e2 = Number(manualAssignments[animalId].evening || 0);
-            await api.post('/milk/production', {
-              animalId,
-              date: totalData.date,
-              morningYield: m,
-              eveningYield: e2,
-              quality: 'good',
-              notes: 'Manual assignment from total'
-            });
+            const sessions = {};
+            if (manualAssignments[animalId].morning) {
+              sessions.morning = { liters: parseFloat(manualAssignments[animalId].morning) };
+            }
+            if (manualAssignments[animalId].evening) {
+              sessions.evening = { liters: parseFloat(manualAssignments[animalId].evening) };
+            }
+            if (Object.keys(sessions).length > 0) {
+              await upsertEntry({
+                farmId: user?.farmId,
+                animalId,
+                date: totalData.date,
+                sessions,
+                notes: 'Manual assignment'
+              });
+            }
           }
-          toast.success('Manual per-animal production recorded');
+          toast.success('Manual assignments recorded');
         }
       }
       fetchData();
@@ -120,16 +147,19 @@ const MilkProduction = () => {
       setFormData({
         animalId: '',
         date: new Date().toISOString().split('T')[0],
-        morningYield: '',
-        eveningYield: '',
-        quality: 'good',
+        morningLiters: '',
+        morningFat: '',
+        morningSnf: '',
+        eveningLiters: '',
+        eveningFat: '',
+        eveningSnf: '',
         notes: ''
       });
       setTotalData({ date: new Date().toISOString().split('T')[0], morningTotal: '', eveningTotal: '' });
       setManualAssignments({});
       setMode('per-animal');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error saving record');
+      toast.error(error.response?.data?.error || 'Error saving record');
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +168,7 @@ const MilkProduction = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this record?')) {
       try {
-        await api.delete(`/milk/production/${id}`);
+        await deleteEntry(id);
         toast.success('Record deleted successfully');
         fetchData();
       } catch (error) {
