@@ -20,6 +20,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/animals', require('./routes/animals'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/milk', require('./routes/milk'));
+app.use('/api/milk-entries', require('./routes/milkEntries'));
 app.use('/api/vaccinations', require('./routes/vaccinations'));
 app.use('/api/calves', require('./routes/calves'));
 app.use('/api/reports', require('./routes/reports'));
