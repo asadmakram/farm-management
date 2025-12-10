@@ -45,7 +45,7 @@ const RecurringExpenses = ({ navigation }) => {
   const fetchExpenses = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/recurring-expenses');
+      const response = await api.get('/api/recurring-expenses');
       setExpenses(response.data.expenses || []);
       setSummary(response.data.summary || { totalActive: 0, estimatedMonthly: 0 });
       setLoading(false);
@@ -76,10 +76,10 @@ const RecurringExpenses = ({ navigation }) => {
       };
 
       if (editingExpense) {
-        await api.put(`/recurring-expenses/${editingExpense._id}`, payload);
+        await api.put(`/api/recurring-expenses/${editingExpense._id}`, payload);
         Alert.alert('Success', 'Expense updated successfully!');
       } else {
-        await api.post('/recurring-expenses', payload);
+        await api.post('/api/recurring-expenses', payload);
         Alert.alert('Success', 'Recurring expense added successfully!');
       }
       
@@ -118,7 +118,7 @@ const RecurringExpenses = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.delete(`/recurring-expenses/${id}`);
+              await api.delete(`/api/recurring-expenses/${id}`);
               Alert.alert('Success', 'Expense deleted successfully!');
               fetchExpenses();
             } catch (error) {
