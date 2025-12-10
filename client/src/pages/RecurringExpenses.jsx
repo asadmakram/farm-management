@@ -50,7 +50,7 @@ function RecurringExpenses() {
     e.preventDefault();
     try {
       if (editingExpense) {
-        await api.put(`/api/recurring-expenses/${editingExpense._id}`, formData);
+        await api.put(`/recurring-expenses/${editingExpense._id}`, formData);
         toast.success('Expense updated successfully!');
       } else {
         await api.post('/recurring-expenses', formData);
@@ -83,11 +83,11 @@ function RecurringExpenses() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this recurring expense?')) {
       try {
-        await api.delete(`/api/recurring-expenses/${id}`);
+        await api.delete(`/recurring-expenses/${id}`);
         toast.success('Expense deleted successfully!');
         fetchExpenses();
       } catch (error) {
-        toast.error('Error deleting expense');
+        toast.error(error.response?.data?.message || 'Error deleting expense');
       }
     }
   };

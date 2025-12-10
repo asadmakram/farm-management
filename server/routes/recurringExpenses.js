@@ -88,10 +88,14 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Delete a recurring expense
+// Delete a recurring expense (soft delete)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const expense = await RecurringExpense.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const expense = await RecurringExpense.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      { isActive: false },
+      { new: true }
+    );
     
     if (!expense) {
       return res.status(404).json({ message: 'Recurring expense not found' });
