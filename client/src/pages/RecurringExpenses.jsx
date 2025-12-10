@@ -38,7 +38,7 @@ function RecurringExpenses() {
 
   const fetchExpenses = async () => {
     try {
-      const response = await api.get('/api/recurring-expenses');
+      const response = await api.get('/recurring-expenses');
       setExpenses(response.data.expenses);
       setSummary(response.data.summary);
     } catch (error) {
@@ -50,10 +50,10 @@ function RecurringExpenses() {
     e.preventDefault();
     try {
       if (editingExpense) {
-        await api.put(`/api/recurring-expenses/${editingExpense._id}`, formData);
+        await api.put(`/recurring-expenses/${editingExpense._id}`, formData);
         toast.success('Expense updated successfully!');
       } else {
-        await api.post('/api/recurring-expenses', formData);
+        await api.post('/recurring-expenses', formData);
         toast.success('Recurring expense added successfully!');
       }
       setShowModal(false);
@@ -83,7 +83,7 @@ function RecurringExpenses() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this recurring expense?')) {
       try {
-        await api.delete(`/api/recurring-expenses/${id}`);
+        await api.delete(`/recurring-expenses/${id}`);
         toast.success('Expense deleted successfully!');
         fetchExpenses();
       } catch (error) {
