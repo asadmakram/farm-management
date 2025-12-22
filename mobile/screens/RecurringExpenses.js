@@ -116,7 +116,8 @@ const RecurringExpenses = ({ navigation }) => {
       resetForm();
       fetchExpenses();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Error saving expense');
+      const msg = error.response?.data?.message || error.response?.data?.error || error.message || 'Error saving expense';
+      Alert.alert('Error', msg);
     }
     setIsSubmitting(false);
   };
