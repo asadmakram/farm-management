@@ -17,7 +17,8 @@ const recurringExpenseSchema = new mongoose.Schema({
       'worker_wage',
       'medical',
       'rent',
-      'toori_wheat_straw'
+      'toori_wheat_straw',
+      'misc'
     ],
     required: true
   },

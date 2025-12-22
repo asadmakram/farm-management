@@ -15,7 +15,8 @@ const EXPENSE_TYPES = [
   { value: 'worker_wage', label: 'Worker Wage' },
   { value: 'medical', label: 'Medical Expenses' },
   { value: 'rent', label: 'Rent' },
-  { value: 'toori_wheat_straw', label: 'Toori (Wheat Straw)' }
+  { value: 'toori_wheat_straw', label: 'Toori (Wheat Straw)' },
+  { value: 'misc', label: 'Misc' }
 ];
 
 const RecurringExpenses = ({ navigation }) => {
@@ -40,6 +41,7 @@ const RecurringExpenses = ({ navigation }) => {
 
   useEffect(() => {
     fetchExpenses();
+    fetchNotifications();
   }, []);
 
   const fetchExpenses = async () => {
@@ -59,6 +61,33 @@ const RecurringExpenses = ({ navigation }) => {
     setRefreshing(true);
     await fetchExpenses();
     setRefreshing(false);
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      const notifications = response.data.notifications || [];
+      const now = new Date();
+
+      const toAlert = notifications.filter(n => !n.isSent && new Date(n.alertDate) <= now);
+
+      if (toAlert.length > 0) {
+        const titles = toAlert.map(n => `• ${n.title} on ${new Date(n.dueDate).toLocaleDateString()}`).join('\n');
+        Alert.alert('Upcoming expenses', `You have ${toAlert.length} upcoming expense(s):\n\n${titles}`);
+
+        // Mark them as sent so we don't alert repeatedly
+        toAlert.forEach(async (n) => {
+          try {
+            await api.put(`/notifications/${n._id}`, { isSent: true });
+          } catch (e) {
+            // ignore individual update errors
+          }
+        });
+      }
+    } catch (error) {
+      // ignore errors for notifications
+      console.warn('Error fetching notifications', error.message || error);
+    }
   };
 
   const handleSubmit = async () => {

@@ -13,7 +13,8 @@ const EXPENSE_TYPES = [
   { value: 'worker_wage', label: 'Worker Wage' },
   { value: 'medical', label: 'Medical Expenses' },
   { value: 'rent', label: 'Rent' },
-  { value: 'toori_wheat_straw', label: 'Toori (Wheat Straw)' }
+  { value: 'toori_wheat_straw', label: 'Toori (Wheat Straw)' },
+  { value: 'misc', label: 'Misc' }
 ];
 
 function RecurringExpenses() {
@@ -49,11 +50,17 @@ function RecurringExpenses() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        amount: Number(formData.amount),
+        workerCount: Number(formData.workerCount || 1)
+      };
+
       if (editingExpense) {
-        await api.put(`/api/recurring-expenses/${editingExpense._id}`, formData);
+        await api.put(`/api/recurring-expenses/${editingExpense._id}`, payload);
         toast.success('Expense updated successfully!');
       } else {
-        await api.post('/recurring-expenses', formData);
+        await api.post('/recurring-expenses', payload);
         toast.success('Recurring expense added successfully!');
       }
       setShowModal(false);
