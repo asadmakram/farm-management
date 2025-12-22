@@ -291,6 +291,7 @@ All new features are fully responsive:
 3. **Notifications**
    - Contract expiry reminders
    - Recurring expense due alerts
+   - Notifications collection: upcoming expense alerts (2 days before) created automatically when recurring expense is added/updated
    - Low payment collection warnings
 
 4. **Export Features**
