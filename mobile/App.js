@@ -93,7 +93,7 @@ function MoreMenuScreen({ navigation }) {
 
       // Save language to AsyncStorage
       await AsyncStorage.setItem('userLanguage', language);
-      
+
       // Save language preference to server
       try {
         const response = await api.put('/auth/language', { preferredLanguage: language });
@@ -109,7 +109,7 @@ function MoreMenuScreen({ navigation }) {
 
       // Change language in i18n
       i18n.changeLanguage(language);
-      
+
       setShowLanguageModal(false);
 
       // If RTL direction needs to change, show alert and reload
@@ -117,7 +117,7 @@ function MoreMenuScreen({ navigation }) {
         I18nManager.allowRTL(isRTL);
         I18nManager.forceRTL(isRTL);
         await AsyncStorage.setItem('isRTL', isRTL.toString());
-        
+
         Alert.alert(
           t('language.restartRequired') || 'Restart Required',
           t('language.restartMessage') || 'Please restart the app to apply the layout direction changes.',
@@ -183,10 +183,10 @@ function MoreMenuScreen({ navigation }) {
               <Ionicons name={item.icon} size={22} color={item.color} />
             </View>
             <Text style={moreStyles.menuItemText}>{item.label}</Text>
-            <Ionicons 
-              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"} 
-              size={20} 
-              color="#94a3b8" 
+            <Ionicons
+              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+              size={20}
+              color="#94a3b8"
             />
           </TouchableOpacity>
         ))}
@@ -211,7 +211,6 @@ function MoreMenuScreen({ navigation }) {
           <Ionicons name="log-out-outline" color="#ef4444" size={22} />
           <Text style={moreStyles.logoutLabel}>{t('more.signOut')}</Text>
         </TouchableOpacity>
-
         <Text style={moreStyles.version}>{t('more.version')}</Text>
       </ScrollView>
 
@@ -225,7 +224,7 @@ function MoreMenuScreen({ navigation }) {
         <View style={moreStyles.modalOverlay}>
           <View style={moreStyles.modalContent}>
             <Text style={moreStyles.modalTitle}>{t('language.title')}</Text>
-            
+
             <TouchableOpacity
               style={[
                 moreStyles.languageOption,
@@ -361,6 +360,7 @@ const moreStyles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
     borderColor: '#fecaca',
+    width: '100%',
   },
   logoutLabel: {
     color: '#ef4444',
@@ -441,7 +441,7 @@ const moreStyles = StyleSheet.create({
 function BottomTabs() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -499,27 +499,27 @@ function BottomTabs() {
         },
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeStackNavigator}
         options={{ tabBarLabel: t('dashboard.title') }}
       />
-      <Tab.Screen 
-        name="Animals" 
+      <Tab.Screen
+        name="Animals"
         component={Animals}
         options={{ tabBarLabel: t('dashboard.animals') }}
       />
-      <Tab.Screen 
-        name="Milk" 
+      <Tab.Screen
+        name="Milk"
         component={MilkProduction}
         options={{ tabBarLabel: t('milk.subtitle') }}
       />
-      <Tab.Screen 
-        name="Sales" 
+      <Tab.Screen
+        name="Sales"
         component={MilkSales}
         options={{ tabBarLabel: t('dashboard.sales') }}
       />
-      <Tab.Screen 
+      <Tab.Screen
         name="More"
         component={MoreStackNavigator}
         options={{ tabBarLabel: t('more.title').split(' ')[0] }}
