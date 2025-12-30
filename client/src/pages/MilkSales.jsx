@@ -22,14 +22,14 @@ const MilkSales = () => {
   const [customerSearch, setCustomerSearch] = useState('');
   const customerInputRef = useRef(null);
   const dropdownRef = useRef(null);
-  
+
   // Month/Year filter state
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
-  
+
   const defaultSummary = {
     totalQuantity: 0,
     totalRevenue: 0,
@@ -78,19 +78,19 @@ const MilkSales = () => {
       // Calculate start and end dates for the selected month/year
       const startDate = new Date(filterYear, filterMonth, 1);
       const endDate = new Date(filterYear, filterMonth + 1, 0); // Last day of month
-      
+
       const response = await api.get(`/milk/sales?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`);
       const salesData = response.data.data || [];
       setSales(salesData);
       setSummary(response.data.summary || defaultSummary);
-      
+
       // Extract unique customer names for payment allocation
       const customers = [...new Set(salesData
         .filter(sale => sale.customerName || sale.contractId?.vendorName)
         .map(sale => sale.customerName || sale.contractId?.vendorName)
       )];
       setUniqueCustomers(customers);
-      
+
       setLoading(false);
     } catch (error) {
       toast.error('Error fetching sales');
@@ -118,12 +118,21 @@ const MilkSales = () => {
         ratePerLiter: Number(formData.ratePerLiter || 0),
         packagingCost: Number(formData.packagingCost || 0)
       };
-      
+
       // Remove fields not needed for specific sale types
       if (formData.saleType !== 'bandhi') delete payload.contractId;
       if (formData.saleType !== 'mandi' && formData.saleType !== 'bandhi') delete payload.timeOfDay;
       if (formData.saleType !== 'door_to_door') delete payload.packagingCost;
-      
+      // Check for duplicate sale on same date and type
+      for (const x of sales) {
+        if (x.date.substr(0, 10) === formData.date &&
+          x.saleType === formData.saleType && (!formData.timeOfDay === formData.timeOfDay)
+        ) {
+          toast.error('A sale of this type already exists for the selected date');
+          return;
+        }
+      }
+
       await api.post('/milk/sales', payload);
       toast.success('Milk sale recorded successfully');
       fetchSales();
@@ -157,15 +166,15 @@ const MilkSales = () => {
         paymentMethod: paymentAllocationData.paymentMethod,
         date: paymentAllocationData.date
       });
-      
+
       const { remainingAmount, data } = response.data;
-      
+
       if (remainingAmount > 0) {
         toast.info(`Payment allocated to ${data.length} sale(s). Excess amount: Rs ${remainingAmount.toFixed(2)}`);
       } else {
         toast.success(`Payment of Rs ${paymentAllocationData.amount} allocated to ${data.length} sale(s)`);
       }
-      
+
       setShowPaymentAllocationModal(false);
       setPaymentAllocationData({
         customerName: '',
@@ -183,7 +192,7 @@ const MilkSales = () => {
   // Get pending amount for a customer
   const getCustomerPendingAmount = (customerName) => {
     return sales
-      .filter(sale => 
+      .filter(sale =>
         (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
         (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
       )
@@ -198,7 +207,7 @@ const MilkSales = () => {
     }
 
     const pendingSales = sales
-      .filter(sale => 
+      .filter(sale =>
         (sale.customerName === customerName || sale.contractId?.vendorName === customerName) &&
         (sale.paymentStatus === 'pending' || sale.paymentStatus === 'partial')
       )
@@ -213,7 +222,7 @@ const MilkSales = () => {
       const pendingForSale = sale.amountPending || sale.totalAmount;
       const amountToApply = Math.min(remainingAmount, pendingForSale);
       const remainingPending = pendingForSale - amountToApply;
-      
+
       let newStatus = 'pending';
       if (amountToApply >= pendingForSale) {
         newStatus = 'received';
@@ -250,7 +259,7 @@ const MilkSales = () => {
   const handlePaymentAllocationChange = (field, value) => {
     const newData = { ...paymentAllocationData, [field]: value };
     setPaymentAllocationData(newData);
-    
+
     if (field === 'customerName' || field === 'amount') {
       calculatePaymentPreview(
         field === 'customerName' ? value : paymentAllocationData.customerName,
@@ -304,16 +313,16 @@ const MilkSales = () => {
   const filteredSales = (sales || []).filter(sale => {
     // Sale type filter
     if (filterType !== 'all' && sale.saleType !== filterType) return false;
-    
+
     // Customer filter
     if (customerFilter) {
       const saleCustomer = sale.customerName || sale.contractId?.vendorName || '';
       if (!saleCustomer.toLowerCase().includes(customerFilter.toLowerCase())) return false;
     }
-    
+
     // Payment status filter
     if (paymentStatusFilter !== 'all' && sale.paymentStatus !== paymentStatusFilter) return false;
-    
+
     return true;
   });
 
@@ -389,7 +398,7 @@ const MilkSales = () => {
         {/* Sale Type Tabs */}
         <div className="filter-tabs">
           {['all', 'bandhi', 'mandi', 'door_to_door'].map(type => (
-            <button 
+            <button
               key={type}
               className={`filter-tab ${filterType === type ? 'active' : ''}`}
               onClick={() => setFilterType(type)}
@@ -398,7 +407,7 @@ const MilkSales = () => {
             </button>
           ))}
         </div>
-        
+
         {/* Customer & Payment Status Filters */}
         <div className="filter-controls">
           <div className="filter-group">
@@ -472,7 +481,7 @@ const MilkSales = () => {
                     Rs {(sale.amountPending || 0).toFixed(0)}
                   </td>
                   <td data-label="Status">
-                    <select 
+                    <select
                       className={`status-select-compact ${sale.paymentStatus}`}
                       value={sale.paymentStatus}
                       onChange={(e) => updatePaymentStatus(sale._id, e.target.value)}
@@ -561,7 +570,7 @@ const MilkSales = () => {
                       onChange={e => {
                         const contract = contracts.find(c => c._id === e.target.value);
                         setFormData({
-                          ...formData, 
+                          ...formData,
                           contractId: e.target.value,
                           ratePerLiter: contract?.ratePerLiter || formData.ratePerLiter
                         });
@@ -581,7 +590,7 @@ const MilkSales = () => {
                     <select
                       className="form-select"
                       value={formData.timeOfDay}
-                      onChange={e => setFormData({...formData, timeOfDay: e.target.value})}
+                      onChange={e => setFormData({ ...formData, timeOfDay: e.target.value })}
                       required
                     >
                       <option value="">Select time</option>
@@ -604,7 +613,7 @@ const MilkSales = () => {
                     <select
                       className="form-select"
                       value={formData.timeOfDay}
-                      onChange={e => setFormData({...formData, timeOfDay: e.target.value})}
+                      onChange={e => setFormData({ ...formData, timeOfDay: e.target.value })}
                       required
                     >
                       <option value="morning">🌅 Morning</option>
@@ -618,7 +627,7 @@ const MilkSales = () => {
                       step="0.01"
                       className="form-input"
                       value={formData.ratePerLiter}
-                      onChange={e => setFormData({...formData, ratePerLiter: e.target.value})}
+                      onChange={e => setFormData({ ...formData, ratePerLiter: e.target.value })}
                       placeholder="Rate per liter"
                       required
                     />
@@ -644,7 +653,7 @@ const MilkSales = () => {
                         step="0.01"
                         className="form-input"
                         value={formData.ratePerLiter}
-                        onChange={e => setFormData({...formData, ratePerLiter: e.target.value})}
+                        onChange={e => setFormData({ ...formData, ratePerLiter: e.target.value })}
                         placeholder="0.00"
                         required
                       />
@@ -656,7 +665,7 @@ const MilkSales = () => {
                         step="0.01"
                         className="form-input"
                         value={formData.packagingCost}
-                        onChange={e => setFormData({...formData, packagingCost: e.target.value})}
+                        onChange={e => setFormData({ ...formData, packagingCost: e.target.value })}
                         placeholder="0.00"
                       />
                     </div>
@@ -716,6 +725,17 @@ const MilkSales = () => {
                   <span>📋</span>
                   <span>Additional Details</span>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">📦 Quantity</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-input"
+                    value={formData.quantity}
+                    onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
                 {formData.saleType !== 'bandhi' && formData.saleType !== 'door_to_door' && (
                   <div className="form-group" ref={dropdownRef}>
                     <label className="form-label">👤 Customer Name</label>
@@ -756,7 +776,7 @@ const MilkSales = () => {
                   <select
                     className="form-select"
                     value={formData.paymentStatus}
-                    onChange={e => setFormData({...formData, paymentStatus: e.target.value})}
+                    onChange={e => setFormData({ ...formData, paymentStatus: e.target.value })}
                   >
                     <option value="pending">⏳ Pending</option>
                     <option value="received">✅ Received</option>
@@ -769,7 +789,7 @@ const MilkSales = () => {
                   <textarea
                     className="form-textarea"
                     value={formData.notes}
-                    onChange={e => setFormData({...formData, notes: e.target.value})}
+                    onChange={e => setFormData({ ...formData, notes: e.target.value })}
                     rows="3"
                     placeholder="Add any additional notes..."
                   />
@@ -823,7 +843,7 @@ const MilkSales = () => {
                     })}
                   </select>
                 </div>
-                
+
                 {paymentAllocationData.customerName && (
                   <div className="info-box" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)', border: '1px solid #f59e0b', borderRadius: '0.5rem', padding: '1rem', margin: '1rem 0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#b45309', marginBottom: '0.5rem' }}>
@@ -863,7 +883,7 @@ const MilkSales = () => {
                     <select
                       className="form-select"
                       value={paymentAllocationData.paymentMethod}
-                      onChange={e => setPaymentAllocationData({...paymentAllocationData, paymentMethod: e.target.value})}
+                      onChange={e => setPaymentAllocationData({ ...paymentAllocationData, paymentMethod: e.target.value })}
                     >
                       <option value="cash">💵 Cash</option>
                       <option value="bank_transfer">🏦 Bank Transfer</option>
@@ -878,7 +898,7 @@ const MilkSales = () => {
                     type="date"
                     className="form-input"
                     value={paymentAllocationData.date}
-                    onChange={e => setPaymentAllocationData({...paymentAllocationData, date: e.target.value})}
+                    onChange={e => setPaymentAllocationData({ ...paymentAllocationData, date: e.target.value })}
                   />
                 </div>
               </div>
@@ -922,7 +942,7 @@ const MilkSales = () => {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   {paymentPreview.find(p => p.isExcess) && (
                     <div className="info-box" style={{ background: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)', border: '1px solid #3b82f6', borderRadius: '0.5rem', padding: '0.75rem', marginTop: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', color: '#1d4ed8' }}>
