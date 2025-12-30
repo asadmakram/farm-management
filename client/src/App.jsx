@@ -23,6 +23,7 @@ import Calves from './pages/Calves.jsx';
 import Reports from './pages/Reports.jsx';
 import Contracts from './pages/Contracts.jsx';
 import RecurringExpenses from './pages/RecurringExpenses.jsx';
+import Reminders from './pages/Reminders.jsx';
 import Settings from './pages/Settings.jsx';
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
                 <Route path="/expenses" element={<PrivateRoute><Expenses /></PrivateRoute>} />
                 <Route path="/recurring-expenses" element={<PrivateRoute><RecurringExpenses /></PrivateRoute>} />
                 <Route path="/vaccinations" element={<PrivateRoute><Vaccinations /></PrivateRoute>} />
+                <Route path="/reminders" element={<PrivateRoute><Reminders /></PrivateRoute>} />
                 <Route path="/calves" element={<PrivateRoute><Calves /></PrivateRoute>} />
                 <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />

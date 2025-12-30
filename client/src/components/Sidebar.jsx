@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import {
   FaHome, FaTint, FaMoneyBillWave, FaSyringe,
   FaBaby, FaChartBar, FaSignOutAlt,
-  FaFileContract, FaRedoAlt, FaCog, FaChevronLeft, FaChevronRight, FaTimes, FaBars
+  FaFileContract, FaRedoAlt, FaCog, FaChevronLeft, FaChevronRight, FaTimes, FaBars, FaBell
 } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
+import NotificationBell from './NotificationBell.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Sidebar.css';
 
@@ -39,6 +40,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { path: '/expenses', label: 'Expenses', icon: <FaMoneyBillWave /> },
     { path: '/recurring-expenses', label: 'Recurring Expenses', icon: <FaRedoAlt /> },
     { path: '/vaccinations', label: 'Vaccinations', icon: <FaSyringe /> },
+    { path: '/reminders', label: 'Reminders', icon: <FaBell /> },
     { path: '/calves', label: 'Calves', icon: <FaBaby /> },
     { path: '/reports', label: 'Reports', icon: <FaChartBar /> },
     { path: '/settings', label: 'Settings', icon: <FaCog /> }
@@ -114,6 +116,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
 
       {/* Navigation Links */}
       <nav className="sidebar-nav p-2 flex-grow-1 overflow-auto">
+        {/* Notification Bell */}
+        <div className="notification-bell-container mb-2">
+          <NotificationBell />
+        </div>
+
         <ul className="list-unstyled">
           {navLinks.map(link => (
             <li key={link.path} className="mb-1">

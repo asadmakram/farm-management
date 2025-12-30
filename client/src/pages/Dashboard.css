@@ -550,3 +550,182 @@
     font-size: 0.8rem;
   }
 }
+
+/* Vaccination Reminders Section */
+.vaccination-reminders-section {
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+  border-left: 4px solid #dc2626;
+}
+
+.reminders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.reminders-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reminders-icon {
+  color: #dc2626;
+}
+
+.view-all-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+}
+
+.view-all-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.reminders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.reminder-card-dashboard {
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.reminder-card-dashboard:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.reminder-card-dashboard.priority-overdue {
+  border-left: 4px solid #dc2626;
+  background: linear-gradient(135deg, #fef2f2 0%, var(--background) 100%);
+}
+
+.reminder-card-dashboard.priority-today {
+  border-left: 4px solid #ea580c;
+  background: linear-gradient(135deg, #fff7ed 0%, var(--background) 100%);
+}
+
+.reminder-card-dashboard.priority-urgent {
+  border-left: 4px solid #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, var(--background) 100%);
+}
+
+.reminder-card-dashboard.priority-soon {
+  border-left: 4px solid #16a34a;
+  background: linear-gradient(135deg, #f0fdf4 0%, var(--background) 100%);
+}
+
+.reminder-header-dashboard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.reminder-icon-dashboard {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.reminder-info-dashboard {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-animal {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.reminder-due-date {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.reminder-details-dashboard {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 0.5rem;
+}
+
+.reminder-vet {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Responsive adjustments for reminders */
+@media (max-width: 768px) {
+  .vaccination-reminders-section {
+    padding: 1rem;
+  }
+
+  .reminders-title {
+    font-size: 1.1rem;
+  }
+
+  .reminders-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .reminder-card-dashboard {
+    padding: 0.875rem;
+  }
+
+  .reminder-icon-dashboard {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .reminder-animal {
+    font-size: 0.9rem;
+  }
+
+  .reminder-due-date {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .reminders-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .view-all-link {
+    align-self: flex-end;
+  }
+}

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { FaTint, FaMoneyBillWave, FaChartLine, FaCalendarAlt, FaUsers, FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { FaTint, FaMoneyBillWave, FaChartLine, FaCalendarAlt, FaUsers, FaArrowUp, FaArrowDown, FaSyringe, FaExclamationTriangle, FaClock, FaCheckCircle } from 'react-icons/fa';
 import { GiCow } from 'react-icons/gi';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
+import { toast } from 'react-toastify';
 import './Dashboard.css';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
+  const [reminders, setReminders] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
@@ -28,12 +31,78 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [filterMonth, filterYear]);
 
+  // Show toast notifications for urgent reminders
+  useEffect(() => {
+    if (reminders?.vaccinations) {
+      const overdueVaccinations = reminders.vaccinations.filter(vacc => getDaysUntilDue(vacc.nextDueDate) < 0);
+      const dueTodayVaccinations = reminders.vaccinations.filter(vacc => getDaysUntilDue(vacc.nextDueDate) === 0);
+      const dueSoonVaccinations = reminders.vaccinations.filter(vacc => {
+        const days = getDaysUntilDue(vacc.nextDueDate);
+        return days > 0 && days <= 3;
+      });
+
+      // Show toasts for urgent reminders (avoid spam by limiting to 2-3 most urgent)
+      if (overdueVaccinations.length > 0) {
+        const vacc = overdueVaccinations[0];
+        toast.error(
+          `🚨 Overdue: ${vacc.animalId?.tagNumber || 'Animal'} needs ${vacc.vaccineName}`,
+          {
+            position: "top-right",
+            autoClose: 8000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            onClick: () => window.location.href = '/reminders'
+          }
+        );
+      }
+
+      if (dueTodayVaccinations.length > 0) {
+        const vacc = dueTodayVaccinations[0];
+        toast.warning(
+          `⚠️ Due Today: ${vacc.animalId?.tagNumber || 'Animal'} needs ${vacc.vaccineName}`,
+          {
+            position: "top-right",
+            autoClose: 7000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            onClick: () => window.location.href = '/reminders'
+          }
+        );
+      }
+
+      if (dueSoonVaccinations.length > 0 && overdueVaccinations.length === 0 && dueTodayVaccinations.length === 0) {
+        const vacc = dueSoonVaccinations[0];
+        const days = getDaysUntilDue(vacc.nextDueDate);
+        toast.info(
+          `📅 Due Soon: ${vacc.animalId?.tagNumber || 'Animal'} needs ${vacc.vaccineName} in ${days} day${days > 1 ? 's' : ''}`,
+          {
+            position: "top-right",
+            autoClose: 6000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            onClick: () => window.location.href = '/reminders'
+          }
+        );
+      }
+    }
+  }, [reminders]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/dashboard?month=${filterMonth}&year=${filterYear}`);
-      setDashboardData(response.data.dashboard);
-      setFilterInfo(response.data.filter);
+      const [dashboardResponse, remindersResponse] = await Promise.all([
+        api.get(`/dashboard?month=${filterMonth}&year=${filterYear}`),
+        api.get('/reminders')
+      ]);
+      setDashboardData(dashboardResponse.data.dashboard);
+      setFilterInfo(dashboardResponse.data.filter);
+      setReminders(remindersResponse.data.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -55,6 +124,38 @@ const Dashboard = () => {
   }
 
   const { animals, milk, sales, expenses, profitLoss } = dashboardData;
+
+  // Get urgent reminders (overdue + due today + due within 7 days)
+  const urgentVaccinations = reminders?.vaccinations?.filter(vacc => {
+    const daysUntilDue = getDaysUntilDue(vacc.nextDueDate);
+    return daysUntilDue <= 7; // Show more reminders on dashboard
+  }) || [];
+
+  const getDaysUntilDue = (dueDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getReminderPriority = (dueDate) => {
+    const days = getDaysUntilDue(dueDate);
+    if (days < 0) return { level: 'overdue', color: '#dc2626', icon: FaExclamationTriangle, bgColor: '#fef2f2' };
+    if (days === 0) return { level: 'today', color: '#ea580c', icon: FaExclamationTriangle, bgColor: '#fff7ed' };
+    if (days <= 3) return { level: 'urgent', color: '#d97706', icon: FaClock, bgColor: '#fffbeb' };
+    return { level: 'soon', color: '#16a34a', icon: FaCheckCircle, bgColor: '#f0fdf4' };
+  };
+
+  const formatDueDate = (dueDate) => {
+    const days = getDaysUntilDue(dueDate);
+    if (days < 0) return `${Math.abs(days)} days overdue`;
+    if (days === 0) return 'Due today';
+    if (days === 1) return 'Due tomorrow';
+    return `Due in ${days} days`;
+  };
 
   // Prepare data for charts
   const animalData = [
@@ -179,6 +280,51 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Vaccination Reminders Section */}
+      {urgentVaccinations.length > 0 && (
+        <div className="vaccination-reminders-section">
+          <div className="reminders-header">
+            <h2 className="reminders-title">
+              <FaSyringe className="reminders-icon" />
+              Vaccination Reminders
+            </h2>
+            <Link to="/reminders" className="view-all-link">
+              View All →
+            </Link>
+          </div>
+
+          <div className="reminders-grid">
+            {urgentVaccinations.slice(0, 6).map(vacc => {
+              const priority = getReminderPriority(vacc.nextDueDate);
+              const PriorityIcon = priority.icon;
+
+              return (
+                <div key={vacc._id} className={`reminder-card-dashboard priority-${priority.level}`}>
+                  <div className="reminder-header-dashboard">
+                    <div className="reminder-icon-dashboard" style={{ backgroundColor: priority.color }}>
+                      <PriorityIcon />
+                    </div>
+                    <div className="reminder-info-dashboard">
+                      <h4 className="reminder-animal">
+                        {vacc.animalId?.tagNumber || 'Unknown'} - {vacc.vaccineName}
+                      </h4>
+                      <p className="reminder-due-date" style={{ color: priority.color }}>
+                        {formatDueDate(vacc.nextDueDate)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="reminder-details-dashboard">
+                    <span className="reminder-vet">
+                      {vacc.veterinarian || 'No vet specified'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="charts-grid">

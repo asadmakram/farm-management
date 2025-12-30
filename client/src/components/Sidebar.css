@@ -28,6 +28,14 @@
   padding-bottom: 1rem;
 }
 
+.notification-bell-container {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 1rem;
+}
+
 .sidebar-nav .nav-link {
   margin-bottom: 0.25rem;
   transition: all 0.2s ease;
