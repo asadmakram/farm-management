@@ -404,52 +404,6 @@ const Dashboard = ({ navigation }) => {
         </View>
       )}
 
-      {/* Quick Actions */}
-      <View style={styles.quickActionsSection}>
-        <Text style={styles.quickActionsTitle}>{t('dashboard.quickActions')}</Text>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => navigation.navigate('Animals')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#f97316', '#ea580c']}
-              style={styles.actionGradient}
-            >
-              <Ionicons name="paw" size={24} color="white" />
-              <Text style={styles.actionButtonText}>{t('dashboard.animals')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => navigation.navigate('Milk')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#06b6d4', '#0891b2']}
-              style={styles.actionGradient}
-            >
-              <Ionicons name="water" size={24} color="white" />
-              <Text style={styles.actionButtonText}>{t('dashboard.milk')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionButton} 
-            onPress={() => navigation.navigate('Sales')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#22c55e', '#16a34a']}
-              style={styles.actionGradient}
-            >
-              <Ionicons name="cash" size={24} color="white" />
-              <Text style={styles.actionButtonText}>{t('dashboard.sales')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <View style={styles.bottomPadding} />
 
       {/* Filter Modal */}
