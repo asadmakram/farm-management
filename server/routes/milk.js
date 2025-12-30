@@ -91,25 +91,37 @@ router.post(
 // @access  Private
 router.put('/production/:id', auth, async (req, res) => {
   try {
-    let production = await MilkProduction.findOne({ 
-      _id: req.params.id, 
-      userId: req.user._id 
+    let production = await MilkProduction.findOne({
+      _id: req.params.id,
+      userId: req.user._id
     });
 
     if (!production) {
       return res.status(404).json({ success: false, message: 'Record not found' });
     }
 
-    production = await MilkProduction.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('animalId', 'tagNumber name breed');
+    // Update the document fields
+    Object.assign(production, req.body);
+    
+    // Ensure totalYield is calculated correctly based on morning and evening yields
+    if (req.body.morningYield !== undefined || req.body.eveningYield !== undefined) {
+      const morning = production.morningYield !== undefined && production.morningYield !== null ? Number(production.morningYield) : 0;
+      const evening = production.eveningYield !== undefined && production.eveningYield !== null ? Number(production.eveningYield) : 0;
+      production.morningYield = isNaN(morning) ? 0 : morning;
+      production.eveningYield = isNaN(evening) ? 0 : evening;
+      production.totalYield = production.morningYield + production.eveningYield;
+    }
+    
+    // Save the document to persist changes
+    production = await production.save();
+    
+    // Populate the animal data
+    await production.populate('animalId', 'tagNumber name breed');
 
-    res.json({ 
-      success: true, 
-      message: 'Record updated successfully', 
-      data: production 
+    res.json({
+      success: true,
+      message: 'Record updated successfully',
+      data: production
     });
   } catch (error) {
     console.error('Update milk production error:', error);

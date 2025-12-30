@@ -543,7 +543,7 @@ const MilkProduction = () => {
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? 'Adding...' : 'Add Record'}</Text>
+                <Text style={styles.submitButtonText}>{isSubmitting ? editingId ? 'Updating...' : 'Adding...' : editingId ? 'Update Record' : 'Add Record'}</Text>
               </TouchableOpacity>
             </View>
           </View>
