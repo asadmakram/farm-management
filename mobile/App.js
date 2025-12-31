@@ -172,7 +172,7 @@ function MoreMenuScreen({ navigation }) {
       </LinearGradient>
 
       {/* Menu Items */}
-      <ScrollView contentContainerStyle={moreStyles.menuContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={true}>
         <Text style={moreStyles.sectionTitle}>{t('more.title')}</Text>
         {menuItems.map((item, index) => (
           <TouchableOpacity
