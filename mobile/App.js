@@ -63,6 +63,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="Calves" component={Calves} />
       <MoreStack.Screen name="Reports" component={Reports} />
       <MoreStack.Screen name="Contracts" component={Contracts} />
+      <MoreStack.Screen name="Expenses" component={Expenses} />
       <MoreStack.Screen name="RecurringExpenses" component={RecurringExpenses} />
       <MoreStack.Screen name="Settings" component={Settings} />
     </MoreStack.Navigator>
@@ -81,6 +82,7 @@ function MoreMenuScreen({ navigation }) {
     { name: 'Calves', icon: 'heart', label: t('more.calves'), color: '#ec4899', bg: '#fdf2f8' },
     { name: 'Reports', icon: 'bar-chart', label: t('more.reports'), color: '#8b5cf6', bg: '#f5f3ff' },
     { name: 'Contracts', icon: 'document-text', label: t('more.contracts'), color: '#06b6d4', bg: '#ecfeff' },
+    { name: 'Expenses', icon: 'repeat', label: t('more.expenses'), color: '#f59e0b', bg: '#fffbeb' },
     { name: 'RecurringExpenses', icon: 'repeat', label: t('more.recurringExpenses'), color: '#f59e0b', bg: '#fffbeb' },
     { name: 'Settings', icon: 'settings', label: t('more.settings'), color: '#6366f1', bg: '#eef2ff' },
   ];
