@@ -25,6 +25,9 @@ import Contracts from './pages/Contracts.jsx';
 import RecurringExpenses from './pages/RecurringExpenses.jsx';
 import Reminders from './pages/Reminders.jsx';
 import Settings from './pages/Settings.jsx';
+import FeedCalculations from './pages/FeedCalculations.jsx';
+import FeedCharts from './pages/FeedCharts.jsx';
+import FeedOrders from './pages/FeedOrders.jsx';
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -65,6 +68,9 @@ function App() {
                 <Route path="/calves" element={<PrivateRoute><Calves /></PrivateRoute>} />
                 <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
                 <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+                <Route path="/feed-calculations" element={<PrivateRoute><FeedCalculations /></PrivateRoute>} />
+                <Route path="/feed-charts" element={<PrivateRoute><FeedCharts /></PrivateRoute>} />
+                <Route path="/feed-orders" element={<PrivateRoute><FeedOrders /></PrivateRoute>} />
               </Routes>
             </main>
           </div>

@@ -28,6 +28,11 @@ app.use('/api/contracts', require('./routes/contracts'));
 app.use('/api/recurring-expenses', require('./routes/recurringExpenses'));
 app.use('/api/currencies', require('./routes/currencies'));
 app.use('/api/reminders', require('./routes/reminders'));
+app.use('/api/feed-categories', require('./routes/feedCategories'));
+app.use('/api/feed-items', require('./routes/feedItems'));
+app.use('/api/feed-calculations', require('./routes/feedCalculations'));
+app.use('/api/feed-charts', require('./routes/feedCharts'));
+app.use('/api/feed-orders', require('./routes/feedOrders'));
 
 // Serve static client in production
 if (process.env.NODE_ENV === 'production') {

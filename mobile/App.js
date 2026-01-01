@@ -29,6 +29,7 @@ import Reports from './screens/Reports';
 import Contracts from './screens/Contracts';
 import RecurringExpenses from './screens/RecurringExpenses';
 import Settings from './screens/Settings';
+import FeedCalculations from './screens/FeedCalculations';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -66,6 +67,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="Expenses" component={Expenses} />
       <MoreStack.Screen name="RecurringExpenses" component={RecurringExpenses} />
       <MoreStack.Screen name="Settings" component={Settings} />
+      <MoreStack.Screen name="FeedCalculations" component={FeedCalculations} />
     </MoreStack.Navigator>
   );
 }
@@ -84,6 +86,7 @@ function MoreMenuScreen({ navigation }) {
     { name: 'Contracts', icon: 'document-text', label: t('more.contracts'), color: '#06b6d4', bg: '#ecfeff' },
     { name: 'Expenses', icon: 'repeat', label: t('more.expenses'), color: '#f59e0b', bg: '#fffbeb' },
     { name: 'RecurringExpenses', icon: 'repeat', label: t('more.recurringExpenses'), color: '#f59e0b', bg: '#fffbeb' },
+    { name: 'FeedCalculations', icon: 'calculator', label: 'Feed Calculations', color: '#10b981', bg: '#d1fae5' },
     { name: 'Settings', icon: 'settings', label: t('more.settings'), color: '#6366f1', bg: '#eef2ff' },
   ];
 

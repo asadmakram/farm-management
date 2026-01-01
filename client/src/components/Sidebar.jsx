@@ -43,6 +43,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
     { path: '/reminders', label: 'Reminders', icon: <FaBell /> },
     { path: '/calves', label: 'Calves', icon: <FaBaby /> },
     { path: '/reports', label: 'Reports', icon: <FaChartBar /> },
+    { path: '/feed-calculations', label: 'Feed Calculations', icon: <FaChartBar /> },
+    { path: '/feed-orders', label: 'Feed Orders', icon: <FaMoneyBillWave /> },
     { path: '/settings', label: 'Settings', icon: <FaCog /> }
   ];
 

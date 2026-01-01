@@ -13,7 +13,9 @@ const getDefaultHost = () => {
   if (envUrl) return envUrl;
 
   // Use production server by default
-  return 'https://farm-management-nh9y.onrender.com/api';
+  // return 'https://farm-management-nh9y.onrender.com/api';
+
+  return 'http://192.168.100.161:5000/api';
 
   // Uncomment below for local development
   // if (Platform.OS === 'android') {
