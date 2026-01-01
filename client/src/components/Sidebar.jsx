@@ -117,13 +117,13 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen })
       )}
 
       {/* Navigation Links */}
-      <nav className="sidebar-nav p-2 flex-grow-1 overflow-auto">
+      <nav className="sidebar-nav p-2 flex-grow-1 overflow-scroll">
         {/* Notification Bell */}
         <div className="notification-bell-container mb-2">
           <NotificationBell />
         </div>
 
-        <ul className="list-unstyled">
+        <ul className="list-unstyled" style={{height: "20vh"}}>
           {navLinks.map(link => (
             <li key={link.path} className="mb-1">
               <Link
