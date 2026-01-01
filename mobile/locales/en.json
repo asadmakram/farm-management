@@ -32,6 +32,7 @@
     "submitting": "Signing in...",
     "noAccount": "Don't have an account?",
     "register": "Sign Up",
+    "rememberPassword": "Remember password",
     "footer": "© 2024 Dairy Farm Manager"
   },
   "register": {

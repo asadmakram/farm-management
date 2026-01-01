@@ -7,6 +7,7 @@
     "submitting": "Logging in...",
     "noAccount": "Don't have an account?",
     "register": "Register here",
+    "rememberPassword": "Remember password",
     "success": "Login successful!"
   },
   "app": {
