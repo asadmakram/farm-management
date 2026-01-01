@@ -11,9 +11,24 @@ const Login = () => {
     email: '',
     password: ''
   });
+  const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Load saved credentials on component mount
+  React.useEffect(() => {
+    const savedCredentials = localStorage.getItem('savedCredentials');
+    if (savedCredentials) {
+      try {
+        const { email, password } = JSON.parse(savedCredentials);
+        setFormData({ email, password });
+        setRememberPassword(true);
+      } catch (e) {
+        // Invalid saved credentials, ignore
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -26,6 +41,17 @@ const Login = () => {
     const result = await login(formData.email, formData.password);
     
     if (result.success) {
+      // Save credentials if "Remember Password" is checked
+      if (rememberPassword) {
+        localStorage.setItem('savedCredentials', JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }));
+      } else {
+        // Clear saved credentials if checkbox is unchecked
+        localStorage.removeItem('savedCredentials');
+      }
+      
       toast.success(t('login.success'));
       navigate('/');
     } else {
@@ -68,6 +94,19 @@ const Login = () => {
               required
               placeholder={t('login.password')}
             />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              id="rememberPassword"
+              checked={rememberPassword}
+              onChange={(e) => setRememberPassword(e.target.checked)}
+              style={{ marginRight: '0.5rem', cursor: 'pointer' }}
+            />
+            <label htmlFor="rememberPassword" style={{ margin: 0, cursor: 'pointer' }}>
+              {t('login.rememberPassword') || 'Remember password'}
+            </label>
           </div>
 
           <button 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -10,11 +11,29 @@ const Login = ({ navigation }) => {
     email: '',
     password: ''
   });
+  const [rememberPassword, setRememberPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const { login } = useAuth();
+
+  // Load saved credentials on component mount
+  React.useEffect(() => {
+    const loadSavedCredentials = async () => {
+      try {
+        const savedCredentials = await AsyncStorage.getItem('savedCredentials');
+        if (savedCredentials) {
+          const { email, password } = JSON.parse(savedCredentials);
+          setFormData({ email, password });
+          setRememberPassword(true);
+        }
+      } catch (e) {
+        // Invalid saved credentials, ignore
+      }
+    };
+    loadSavedCredentials();
+  }, []);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,6 +72,25 @@ const Login = ({ navigation }) => {
     
     if (!result.success) {
       Alert.alert('Login Failed', result.message || 'Unable to login. Please try again.');
+    } else {
+      // Save credentials if "Remember Password" is checked
+      if (rememberPassword) {
+        try {
+          await AsyncStorage.setItem('savedCredentials', JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          }));
+        } catch (e) {
+          // Silently fail
+        }
+      } else {
+        // Clear saved credentials if checkbox is unchecked
+        try {
+          await AsyncStorage.removeItem('savedCredentials');
+        } catch (e) {
+          // Silently fail
+        }
+      }
     }
     
     setLoading(false);
@@ -119,6 +157,19 @@ const Login = ({ navigation }) => {
               </TouchableOpacity>
             </View>
             {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          </View>
+
+          <View style={styles.checkboxContainer}>
+            <TouchableOpacity 
+              style={styles.checkbox}
+              onPress={() => setRememberPassword(!rememberPassword)}
+              disabled={loading}
+            >
+              <View style={[styles.checkboxBox, rememberPassword && styles.checkboxBoxChecked]}>
+                {rememberPassword && <Ionicons name="checkmark" size={16} color="white" />}
+              </View>
+              <Text style={styles.checkboxLabel}>{t('login.rememberPassword') || 'Remember password'}</Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity 
@@ -320,6 +371,33 @@ const styles = StyleSheet.create({
   langButtonText: {
     color: '#007bff',
     fontWeight: '600',
+  },
+  checkboxContainer: {
+    marginBottom: 20,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#007bff',
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#007bff',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#1a1a1a',
+    fontWeight: '500',
   },
 });
 
