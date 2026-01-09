@@ -86,10 +86,10 @@ const MilkProduction = () => {
           setIsSubmitting(false);
           return;
         }
-        
+
         const morning = Number(totalData.morningTotal || 0);
         const evening = Number(totalData.eveningTotal || 0);
-        
+
         if (morning === 0 && evening === 0) {
           Alert.alert(t('common.error'), t('milk.enterAtLeastOneTotal'));
           setIsSubmitting(false);
@@ -100,7 +100,7 @@ const MilkProduction = () => {
           const count = activeAnimals.length;
           const perMorning = +(morning / count).toFixed(2);
           const perEvening = +(evening / count).toFixed(2);
-          
+
           for (const a of activeAnimals) {
             await api.post('/milk/production', {
               animalId: a._id,
@@ -114,7 +114,7 @@ const MilkProduction = () => {
           Alert.alert(t('common.success'), t('milk.totalDividedSuccess'));
         }
       }
-      
+
       fetchData();
       setShowModal(false);
       resetForm();
@@ -215,11 +215,7 @@ const MilkProduction = () => {
               <Ionicons name="paw" size={18} color="#3b82f6" />
             </View>
             <View style={styles.animalDetails}>
-              <Text style={styles.animalTag}>{item.animalId?.tagNumber || 'N/A'}</Text>
-              <View style={styles.dateContainer}>
-                <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
-                <Text style={styles.dateText}>{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</Text>
-              </View>
+              <Text style={styles.dateText}>{new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</Text>
             </View>
           </View>
           <View style={styles.headerActions}>
@@ -239,7 +235,7 @@ const MilkProduction = () => {
             </TouchableOpacity>
           </View>
         </View>
-        
+
         <View style={styles.yieldContainer}>
           <View style={styles.yieldItem}>
             <View style={[styles.yieldIcon, { backgroundColor: '#fef3c7' }]}>
@@ -309,7 +305,7 @@ const MilkProduction = () => {
             <Ionicons name="add" size={26} color="#0891b2" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{todayTotal.toFixed(1)}L</Text>
@@ -335,8 +331,8 @@ const MilkProduction = () => {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
+            <RefreshControl
+              refreshing={refreshing}
               onRefresh={onRefresh}
               colors={['#06b6d4']}
               tintColor="#06b6d4"
@@ -392,7 +388,7 @@ const MilkProduction = () => {
                   >
                     <Text style={[styles.modeText, mode === 'per-animal' && styles.modeTextActive]}>{t('milk.perAnimal')}</Text>
                   </TouchableOpacity>
-                  
+
                 </View>
               </View>
 
@@ -408,10 +404,10 @@ const MilkProduction = () => {
                       >
                         <Picker.Item label={t('milk.selectAnimal')} value="" />
                         {animals.map(animal => (
-                          <Picker.Item 
-                            key={animal._id} 
-                            label={`${animal.tagNumber} - ${animal.name || animal.breed}`} 
-                            value={animal._id} 
+                          <Picker.Item
+                            key={animal._id}
+                            label={`${animal.tagNumber} - ${animal.name || animal.breed}`}
+                            value={animal._id}
                           />
                         ))}
                       </Picker>
@@ -538,8 +534,8 @@ const MilkProduction = () => {
               <TouchableOpacity style={styles.cancelButton} onPress={() => setShowModal(false)}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+              <TouchableOpacity
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -689,8 +685,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   dateText: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: 16,
+    fontWeight: '700',
     marginLeft: 4,
   },
   headerActions: {
