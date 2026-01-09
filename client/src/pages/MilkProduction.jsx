@@ -9,6 +9,7 @@ const MilkProduction = () => {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     animalId: '',
     date: new Date().toISOString().split('T')[0],
@@ -17,7 +18,7 @@ const MilkProduction = () => {
     quality: 'good',
     notes: ''
   });
-  const [mode, setMode] = useState('per-animal'); // 'per-animal' or 'total-day'
+  const [mode, setMode] = useState('total-day'); // 'per-animal' or 'total-day'
   const [totalData, setTotalData] = useState({ date: new Date().toISOString().split('T')[0], morningTotal: '', eveningTotal: '' });
   const [divideEvenly, setDivideEvenly] = useState(true);
   const [manualAssignments, setManualAssignments] = useState({});
@@ -48,9 +49,24 @@ const MilkProduction = () => {
     setIsSubmitting(true);
     try {
       if (mode === 'per-animal') {
-        await api.post('/milk/production', formData);
-        toast.success('Milk production record added successfully');
+        if (editingId) {
+          await api.put(`/milk/production/${editingId}`, formData);
+          toast.success('Milk production record updated successfully');
+        } else {
+          await api.post('/milk/production', formData);
+          toast.success('Milk production record added successfully');
+        }
       } else {
+        // If editing and switching to total-day mode, delete the current record first
+        if (editingId) {
+          try {
+            await api.delete(`/milk/production/${editingId}`);
+          } catch (error) {
+            toast.error('Error deleting original record');
+            return;
+          }
+        }
+        
         const activeAnimals = animals.filter(a => a.status === 'active' && a.gender === 'female');
         if (activeAnimals.length === 0) {
           toast.error('No active female animals to assign totals to');
@@ -76,7 +92,7 @@ const MilkProduction = () => {
               notes: 'Auto divided from total'
             });
           }
-          toast.success('Total production recorded and divided among animals');
+          toast.success(editingId ? 'Record updated and divided among animals' : 'Total production recorded and divided among animals');
         } else {
           const entries = Object.keys(manualAssignments);
           if (entries.length === 0) {
@@ -112,11 +128,12 @@ const MilkProduction = () => {
               notes: 'Manual assignment from total'
             });
           }
-          toast.success('Manual per-animal production recorded');
+          toast.success(editingId ? 'Record updated with manual per-animal assignments' : 'Manual per-animal production recorded');
         }
       }
       fetchData();
       setShowModal(false);
+      setEditingId(null);
       setFormData({
         animalId: '',
         date: new Date().toISOString().split('T')[0],
@@ -127,7 +144,7 @@ const MilkProduction = () => {
       });
       setTotalData({ date: new Date().toISOString().split('T')[0], morningTotal: '', eveningTotal: '' });
       setManualAssignments({});
-      setMode('per-animal');
+      setMode('total-day');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error saving record');
     } finally {
@@ -152,9 +169,64 @@ const MilkProduction = () => {
   };
 
   const openModal = () => {
-    setMode('per-animal');
+    setEditingId(null);
+    setMode('total-day');
     setFormData({ animalId: '', date: new Date().toISOString().split('T')[0], morningYield: '', eveningYield: '', quality: 'good', notes: '' });
     setTotalData({ date: new Date().toISOString().split('T')[0], morningTotal: '', eveningTotal: '' });
+    setManualAssignments({});
+    setDivideEvenly(true);
+    setShowModal(true);
+  };
+
+  const handleModeChange = (newMode) => {
+    if (newMode === mode) return;
+    
+    if (newMode === 'total-day') {
+      // Switching to total-day: preserve date and populate totals from formData if available
+      const currentDate = formData.date || totalData.date || new Date().toISOString().split('T')[0];
+      const morningTotal = formData.morningYield ? Number(formData.morningYield) : (totalData.morningTotal || '');
+      const eveningTotal = formData.eveningYield ? Number(formData.eveningYield) : (totalData.eveningTotal || '');
+      setTotalData({
+        date: currentDate,
+        morningTotal: morningTotal,
+        eveningTotal: eveningTotal
+      });
+    } else {
+      // Switching to per-animal: preserve date, yields, quality, and notes from totalData/formData if available
+      const currentDate = totalData.date || formData.date || new Date().toISOString().split('T')[0];
+      const morningYield = totalData.morningTotal ? String(totalData.morningTotal) : (formData.morningYield || '');
+      const eveningYield = totalData.eveningTotal ? String(totalData.eveningTotal) : (formData.eveningYield || '');
+      setFormData(prev => ({
+        ...prev,
+        date: currentDate,
+        morningYield: morningYield,
+        eveningYield: eveningYield,
+        // Preserve quality and notes if they exist
+        quality: prev.quality || 'good',
+        notes: prev.notes || ''
+      }));
+    }
+    setMode(newMode);
+  };
+
+  const handleEdit = (record) => {
+    setEditingId(record._id);
+    setMode('total-day');
+    const recordDate = new Date(record.date).toISOString().split('T')[0];
+    setFormData({
+      animalId: record.animalId?._id || record.animalId || '',
+      date: recordDate,
+      morningYield: record.morningYield || '',
+      eveningYield: record.eveningYield || '',
+      quality: record.quality || 'good',
+      notes: record.notes || ''
+    });
+    // Pre-populate totalData with the record's yields so switching modes preserves data
+    setTotalData({ 
+      date: recordDate, 
+      morningTotal: record.morningYield || '', 
+      eveningTotal: record.eveningYield || '' 
+    });
     setManualAssignments({});
     setDivideEvenly(true);
     setShowModal(true);
@@ -182,7 +254,7 @@ const MilkProduction = () => {
                 <th className="text-right">Evening</th>
                 <th className="text-right">Total</th>
                 <th className="hide-mobile">Quality</th>
-                <th style={{ width: '50px' }}></th>
+                <th style={{ width: '100px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -199,13 +271,23 @@ const MilkProduction = () => {
                     </span>
                   </td>
                   <td>
-                    <button 
-                      className="btn-icon-only danger" 
-                      onClick={() => handleDelete(record._id)}
-                      title="Delete record"
-                    >
-                      <FaTrash size={14} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button 
+                        className="btn-icon-only" 
+                        onClick={() => handleEdit(record)}
+                        title="Edit record"
+                        style={{ color: '#3b82f6' }}
+                      >
+                        <FaEdit size={14} />
+                      </button>
+                      <button 
+                        className="btn-icon-only danger" 
+                        onClick={() => handleDelete(record._id)}
+                        title="Delete record"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -223,21 +305,27 @@ const MilkProduction = () => {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowModal(false);
+          setEditingId(null);
+        }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add Milk Production Record</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>&times;</button>
+              <h2>{editingId ? 'Edit Milk Production Record' : 'Add Milk Production Record'}</h2>
+              <button className="modal-close" onClick={() => {
+                setShowModal(false);
+                setEditingId(null);
+              }}>&times;</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">Record Mode</label>
                 <div className="form-row">
                   <label>
-                    <input type="radio" name="mode" value="per-animal" checked={mode === 'per-animal'} onChange={() => setMode('per-animal')} /> Per Animal
+                    <input type="radio" name="mode" value="per-animal" checked={mode === 'per-animal'} onChange={() => handleModeChange('per-animal')} /> Per Animal
                   </label>
                   <label>
-                    <input type="radio" name="mode" value="total-day" checked={mode === 'total-day'} onChange={() => setMode('total-day')} /> Total For Day
+                    <input type="radio" name="mode" value="total-day" checked={mode === 'total-day'} onChange={() => handleModeChange('total-day')} /> Total For Day
                   </label>
                 </div>
               </div>
@@ -358,11 +446,14 @@ const MilkProduction = () => {
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => {
+                  setShowModal(false);
+                  setEditingId(null);
+                }}>
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Add Record'}
+                  {isSubmitting ? 'Saving...' : editingId ? 'Update Record' : 'Add Record'}
                 </button>
               </div>
             </form>
