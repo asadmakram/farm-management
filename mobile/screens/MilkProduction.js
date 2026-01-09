@@ -173,16 +173,54 @@ const MilkProduction = () => {
 
   const handleEdit = (item) => {
     setEditingId(item._id);
+    const recordDate = item.date.split('T')[0];
     setFormData({
       animalId: item.animalId?._id || '',
-      date: item.date.split('T')[0],
+      date: recordDate,
       morningYield: item.morningYield.toString(),
       eveningYield: item.eveningYield.toString(),
       quality: item.quality || 'good',
       notes: item.notes || ''
     });
-    setMode('per-animal');
+    // Pre-populate totalData with the record's yields so switching modes preserves data
+    setTotalData({ 
+      date: recordDate, 
+      morningTotal: item.morningYield.toString(), 
+      eveningTotal: item.eveningYield.toString() 
+    });
+    setMode('total-day');
     setShowModal(true);
+  };
+
+  const handleModeChange = (newMode) => {
+    if (newMode === mode) return;
+    
+    if (newMode === 'total-day') {
+      // Switching to total-day: preserve date and populate totals from formData if available
+      const currentDate = formData.date || totalData.date || new Date().toISOString().split('T')[0];
+      const morningTotal = formData.morningYield ? formData.morningYield : (totalData.morningTotal || '');
+      const eveningTotal = formData.eveningYield ? formData.eveningYield : (totalData.eveningTotal || '');
+      setTotalData({
+        date: currentDate,
+        morningTotal: morningTotal,
+        eveningTotal: eveningTotal
+      });
+    } else {
+      // Switching to per-animal: preserve date and populate yields from totalData if available
+      const currentDate = totalData.date || formData.date || new Date().toISOString().split('T')[0];
+      const morningYield = totalData.morningTotal ? totalData.morningTotal : (formData.morningYield || '');
+      const eveningYield = totalData.eveningTotal ? totalData.eveningTotal : (formData.eveningYield || '');
+      setFormData(prev => ({
+        ...prev,
+        date: currentDate,
+        morningYield: morningYield,
+        eveningYield: eveningYield,
+        // Preserve quality and notes if they exist
+        quality: prev.quality || 'good',
+        notes: prev.notes || ''
+      }));
+    }
+    setMode(newMode);
   };
 
   const getQualityColor = (quality) => {
@@ -378,13 +416,13 @@ const MilkProduction = () => {
                 <View style={styles.modeSelector}>
                   <TouchableOpacity
                     style={[styles.modeOption, mode === 'total-day' && styles.modeOptionActive]}
-                    onPress={() => setMode('total-day')}
+                    onPress={() => handleModeChange('total-day')}
                   >
                     <Text style={[styles.modeText, mode === 'total-day' && styles.modeTextActive]}>{t('milk.totalForDay')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modeOption, mode === 'per-animal' && styles.modeOptionActive]}
-                    onPress={() => setMode('per-animal')}
+                    onPress={() => handleModeChange('per-animal')}
                   >
                     <Text style={[styles.modeText, mode === 'per-animal' && styles.modeTextActive]}>{t('milk.perAnimal')}</Text>
                   </TouchableOpacity>

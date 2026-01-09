@@ -317,6 +317,7 @@ router.post(
       };
 
       sale.payments.push(payment);
+      sale.customerName = sale.customerName || req.body.customerName;
       await sale.save(); // This triggers the pre-save hook to update payment status
 
       res.json({ 
@@ -345,12 +346,19 @@ router.put('/sales/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
 
+    // Only modify payment status if it's explicitly being changed
     // If payment status is being changed to pending, clear all payments
-    if (req.body.paymentStatus === 'pending') {
+    if (req.body.paymentStatus === 'pending' && sale.paymentStatus !== 'pending') {
       sale.payments = [];
       sale.amountPaid = 0;
       sale.amountPending = sale.totalAmount;
       sale.paymentStatus = 'pending';
+      // Update other fields from req.body
+      Object.keys(req.body).forEach(key => {
+        if (key !== 'paymentStatus' && key !== 'payments' && key !== 'amountPaid' && key !== 'amountPending') {
+          sale[key] = req.body[key];
+        }
+      });
       await sale.save();
       
       return res.json({ 
@@ -370,21 +378,51 @@ router.put('/sales/:id', auth, async (req, res) => {
           paymentMethod: 'cash',
           notes: 'Marked as fully paid'
         });
-        await sale.save();
-        
-        return res.json({ 
-          success: true, 
-          message: 'Sale marked as fully paid', 
-          data: sale 
-        });
       }
+      // Update other fields from req.body
+      Object.keys(req.body).forEach(key => {
+        if (key !== 'paymentStatus' && key !== 'payments' && key !== 'amountPaid' && key !== 'amountPending') {
+          sale[key] = req.body[key];
+        }
+      });
+      await sale.save();
+      
+      return res.json({ 
+        success: true, 
+        message: 'Sale marked as fully paid', 
+        data: sale 
+      });
     }
 
-    sale = await MilkSale.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    // For partial status or when status is not being changed, preserve existing payments
+    // Only update payment status if it's explicitly different
+    if (req.body.paymentStatus && req.body.paymentStatus !== sale.paymentStatus) {
+      // Status is being changed but not to pending or received (e.g., to partial)
+      sale.paymentStatus = req.body.paymentStatus;
+    }
+    
+    // Update other fields but preserve payments, amountPaid, and amountPending unless explicitly changed
+    Object.keys(req.body).forEach(key => {
+      if (key !== 'payments' && key !== 'amountPaid' && key !== 'amountPending') {
+        sale[key] = req.body[key];
+      }
+    });
+    
+    // Recalculate totalAmount if quantity or rate changed
+    if (req.body.quantity !== undefined || req.body.ratePerLiter !== undefined) {
+      const quantity = req.body.quantity !== undefined ? Number(req.body.quantity) : sale.quantity;
+      const ratePerLiter = req.body.ratePerLiter !== undefined ? Number(req.body.ratePerLiter) : sale.ratePerLiter;
+      const packagingCost = req.body.packagingCost !== undefined ? Number(req.body.packagingCost || 0) : (sale.packagingCost || 0);
+      sale.totalAmount = (quantity * ratePerLiter) + (quantity * packagingCost);
+      // Recalculate amountPending if payments are preserved
+      if (sale.paymentStatus === 'partial' || sale.paymentStatus === 'received') {
+        sale.amountPending = Math.max(0, sale.totalAmount - (sale.amountPaid || 0));
+      } else {
+        sale.amountPending = sale.totalAmount;
+      }
+    }
+    
+    await sale.save();
 
     res.json({ 
       success: true, 

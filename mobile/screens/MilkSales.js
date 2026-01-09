@@ -28,6 +28,7 @@ const MilkSales = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [customerFilter, setCustomerFilter] = useState('all');
   const [formData, setFormData] = useState({
@@ -98,7 +99,11 @@ const MilkSales = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.quantity || !formData.ratePerLiter) {
+    if (!formData.quantity || Number(formData.quantity) <= 0) {
+      Alert.alert(t('common.error'), t('sales.fillQuantity') || 'Please provide a valid quantity.');
+      return;
+    }
+    if (!formData.ratePerLiter) {
       Alert.alert(t('common.error'), t('sales.fillQuantityRate'));
       return;
     }
@@ -114,9 +119,15 @@ const MilkSales = () => {
       if (formData.saleType !== 'bandhi') delete payload.contractId;
       if (formData.saleType !== 'door_to_door') delete payload.packagingCost;
 
-      await api.post('/milk/sales', payload);
-      Alert.alert(t('common.success'), t('sales.recordSuccess'));
+      if (editingId) {
+        await api.put(`/milk/sales/${editingId}`, payload);
+        Alert.alert(t('common.success'), t('sales.updateSuccess') || 'Sale updated successfully.');
+      } else {
+        await api.post('/milk/sales', payload);
+        Alert.alert(t('common.success'), t('sales.recordSuccess'));
+      }
       setShowModal(false);
+      setEditingId(null);
       resetForm();
       fetchData();
     } catch (error) {
@@ -148,6 +159,24 @@ const MilkSales = () => {
       paymentStatus: 'pending',
       notes: ''
     });
+    setEditingId(null);
+  };
+
+  const handleEdit = (sale) => {
+    setEditingId(sale._id);
+    setFormData({
+      date: sale.date.split('T')[0],
+      saleType: sale.saleType,
+      quantity: sale.quantity.toString(),
+      contractId: sale.contractId?._id || sale.contractId || '',
+      timeOfDay: sale.timeOfDay || 'morning',
+      packagingCost: (sale.packagingCost || 0).toString(),
+      customerName: sale.customerName || '',
+      ratePerLiter: sale.ratePerLiter.toString(),
+      paymentStatus: sale.paymentStatus || 'pending',
+      notes: sale.notes || ''
+    });
+    setShowModal(true);
   };
 
   const handleSaleTypeChange = (type) => {
@@ -414,19 +443,45 @@ const MilkSales = () => {
           <View style={styles.paymentDetailsRow}>
             <View style={styles.paymentAmounts}>
               <Text style={styles.paymentDetailLabel}>
-                Paid: <Text style={styles.paidAmount}>Rs {item.amountPaid || 0}</Text>
+                Paid: <Text style={styles.paidAmount}>Rs {(item.amountPaid || 0).toFixed(2)}</Text>
               </Text>
               <Text style={styles.paymentDetailLabel}>
-                Pending: <Text style={styles.pendingAmount}>Rs {item.amountPending || item.totalAmount}</Text>
+                Pending: <Text style={styles.pendingAmount}>Rs {(item.amountPending || item.totalAmount || 0).toFixed(2)}</Text>
+              </Text>
+            </View>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() => handleEdit(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={14} color="#3b82f6" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addPaymentBtn}
+                onPress={() => openPaymentModal(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="wallet-outline" size={14} color="#3b82f6" />
+                <Text style={[styles.addPaymentText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.pay')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {/* Edit button for received payments */}
+        {item.paymentStatus === 'received' && (
+          <View style={styles.paymentDetailsRow}>
+            <View style={styles.paymentAmounts}>
+              <Text style={styles.paymentDetailLabel}>
+                Paid: <Text style={styles.paidAmount}>Rs {(item.amountPaid || 0).toFixed(2)}</Text>
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.addPaymentBtn}
-              onPress={() => openPaymentModal(item)}
+              style={styles.editBtn}
+              onPress={() => handleEdit(item)}
               activeOpacity={0.7}
             >
-                <Ionicons name="wallet-outline" size={14} color="#3b82f6" />
-                <Text style={[styles.addPaymentText, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.pay')}</Text>
+              <Ionicons name="create-outline" size={14} color="#3b82f6" />
             </TouchableOpacity>
           </View>
         )}
@@ -507,6 +562,7 @@ const MilkSales = () => {
               selectedValue={customerFilter}
               onValueChange={(value) => setCustomerFilter(value)}
               style={styles.customerPicker}
+              itemStyle={styles.customerPickerItem}
             >
               <Picker.Item label={t('sales.allCustomers') || 'All Customers'} value="all" />
               {uniqueCustomers.map((customer) => (
@@ -541,8 +597,13 @@ const MilkSales = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.recordTitle')}</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Text style={[styles.modalTitle, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>
+                  {editingId ? (t('sales.editSale') || 'Edit Milk Sale') : t('sales.recordTitle')}
+                </Text>
+              <TouchableOpacity onPress={() => {
+                setShowModal(false);
+                setEditingId(null);
+              }}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -576,7 +637,7 @@ const MilkSales = () => {
 
               {formData.saleType === 'bandhi' && contracts.length > 0 && (
                 <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.contract')}</Text>
+                  <Text style={[styles.formLabel, { textAlign: I18nManager.isRTL ? 'right' : 'left' }]}>{t('sales.contract') || 'Contract'}</Text>
                   <View style={styles.pickerContainer}>
                     <Picker
                       selectedValue={formData.contractId}
@@ -589,6 +650,7 @@ const MilkSales = () => {
                         });
                       }}
                       style={styles.picker}
+                      itemStyle={styles.pickerItem}
                     >
                       <Picker.Item label={t('sales.selectContract')} value="" />
                       {contracts.map(c => (
@@ -718,7 +780,9 @@ const MilkSales = () => {
                 onPress={handleSubmit}
                 disabled={isSubmitting}
               >
-                <Text style={styles.submitButtonText}>{isSubmitting ? t('sales.recording') : t('sales.recordSale')}</Text>
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? (editingId ? (t('sales.updating') || 'Updating...') : t('sales.recording')) : (editingId ? (t('sales.updateSale') || 'Update Sale') : t('sales.recordSale'))}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1183,19 +1247,19 @@ const styles = StyleSheet.create({
     color: '#1e40af',
   },
   summaryScroll: {
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    flexGrow: 4,
-    minHeight: 100,
+    flexGrow: 0,
+    maxHeight: 75,
   },
   summaryCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginRight: 8,
-    minWidth: 80,
-    minHeight: 80,
-    maxHeight: 85,
+    borderRadius: 10,
+    padding: 10,
+    marginRight: 6,
+    minWidth: 70,
+    maxWidth: 75,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -1206,21 +1270,21 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   summaryLabel: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#888',
     fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 2,
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 2,
     textAlign: 'center',
   },
   summarySubtext: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#666',
-    marginTop: 2,
     textAlign: 'center',
   },
   filterScroll: {
@@ -1260,9 +1324,10 @@ const styles = StyleSheet.create({
   customerFilterContainer: {
     paddingHorizontal: 16,
     paddingBottom: 12,
+    minHeight: 70,
   },
   customerFilterLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
     marginBottom: 8,
@@ -1273,9 +1338,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#f8f9fa',
     overflow: 'hidden',
+    minHeight: 50,
   },
   customerPicker: {
     height: 46,
+    color: '#1e293b',
+  },
+  customerPickerItem: {
+    fontSize: 14,
+    color: '#1e293b',
+  },
+  pickerItem: {
+    fontSize: 16,
     color: '#1e293b',
   },
   listContent: {
@@ -1408,6 +1482,19 @@ const styles = StyleSheet.create({
   pendingAmount: {
     fontWeight: '600',
     color: '#ef4444',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editBtn: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addPaymentBtn: {
     flexDirection: 'row',

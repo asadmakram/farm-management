@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaPlus, FaMoneyBillWave, FaWallet, FaFilter, FaTimes, FaSearch, FaCalendarAlt } from 'react-icons/fa';
+import { FaPlus, FaMoneyBillWave, FaWallet, FaFilter, FaTimes, FaSearch, FaCalendarAlt, FaEdit } from 'react-icons/fa';
 import api from '../utils/api';
 import { toast } from 'react-toastify';
 import './PageStyles.css';
@@ -43,6 +43,7 @@ const MilkSales = () => {
   const [summary, setSummary] = useState(defaultSummary);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -123,20 +124,29 @@ const MilkSales = () => {
       if (formData.saleType !== 'bandhi') delete payload.contractId;
       if (formData.saleType !== 'mandi' && formData.saleType !== 'bandhi') delete payload.timeOfDay;
       if (formData.saleType !== 'door_to_door') delete payload.packagingCost;
-      // Check for duplicate sale on same date and type
-      for (const x of sales) {
-        if (x.date.substr(0, 10) === formData.date &&
-          x.saleType === formData.saleType && (!formData.timeOfDay === formData.timeOfDay)
-        ) {
-          toast.error('A sale of this type already exists for the selected date');
-          return;
+      
+      // Check for duplicate sale on same date and type (only for new records)
+      if (!editingId) {
+        for (const x of sales) {
+          if (x.date.substr(0, 10) === formData.date &&
+            x.saleType === formData.saleType && (!formData.timeOfDay === formData.timeOfDay)
+          ) {
+            toast.error('A sale of this type already exists for the selected date');
+            return;
+          }
         }
       }
 
-      await api.post('/milk/sales', payload);
-      toast.success('Milk sale recorded successfully');
+      if (editingId) {
+        await api.put(`/milk/sales/${editingId}`, payload);
+        toast.success('Milk sale updated successfully');
+      } else {
+        await api.post('/milk/sales', payload);
+        toast.success('Milk sale recorded successfully');
+      }
       fetchSales();
       setShowModal(false);
+      setEditingId(null);
       resetForm();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error saving sale');
@@ -282,6 +292,25 @@ const MilkSales = () => {
       notes: ''
     });
     setCustomerSearch('');
+    setEditingId(null);
+  };
+
+  const handleEdit = (sale) => {
+    setEditingId(sale._id);
+    setFormData({
+      date: sale.date.split('T')[0],
+      saleType: sale.saleType,
+      quantity: sale.quantity.toString(),
+      contractId: sale.contractId?._id || sale.contractId || '',
+      timeOfDay: sale.timeOfDay || 'morning',
+      packagingCost: sale.packagingCost || 0,
+      customerName: sale.customerName || '',
+      ratePerLiter: sale.ratePerLiter.toString(),
+      paymentStatus: sale.paymentStatus || 'pending', // Preserve actual payment status (pending, partial, received, etc.)
+      notes: sale.notes || ''
+    });
+    setCustomerSearch(sale.customerName || '');
+    setShowModal(true);
   };
 
   const handleSaleTypeChange = (type) => {
@@ -336,7 +365,7 @@ const MilkSales = () => {
           <button className="btn btn-outline btn-success-outline" onClick={() => setShowPaymentAllocationModal(true)}>
             <FaWallet /> <span className="btn-text">Receive Payment</span>
           </button>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
             <FaPlus /> <span className="btn-text">Add Sale</span>
           </button>
         </div>
@@ -454,6 +483,7 @@ const MilkSales = () => {
                 <th className="text-right hide-tablet">Paid</th>
                 <th className="text-right">Pending</th>
                 <th>Status</th>
+                <th style={{ width: '80px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -473,12 +503,12 @@ const MilkSales = () => {
                       sale.timeOfDay === 'morning' ? '🌅' : '🌆'
                     ) : '-'}
                   </td>
-                  <td data-label="Qty" className="text-right">{sale.quantity}</td>
-                  <td data-label="Rate" className="text-right hide-tablet">Rs {sale.ratePerLiter?.toFixed(0)}</td>
-                  <td data-label="Total" className="text-right"><strong>Rs {sale.totalAmount?.toFixed(0)}</strong></td>
-                  <td data-label="Paid" className="text-right hide-tablet text-success">Rs {(sale.amountPaid || 0).toFixed(0)}</td>
+                  <td data-label="Qty" className="text-right">{Number(sale.quantity).toFixed(2)}</td>
+                  <td data-label="Rate" className="text-right hide-tablet">Rs {Number(sale.ratePerLiter || 0).toFixed(2)}</td>
+                  <td data-label="Total" className="text-right"><strong>Rs {Number(sale.totalAmount || 0).toFixed(2)}</strong></td>
+                  <td data-label="Paid" className="text-right hide-tablet text-success">Rs {Number(sale.amountPaid || 0).toFixed(2)}</td>
                   <td data-label="Pending" className="text-right" style={{ color: sale.amountPending > 0 ? 'var(--danger-color)' : 'inherit' }}>
-                    Rs {(sale.amountPending || 0).toFixed(0)}
+                    Rs {Number(sale.amountPending || 0).toFixed(2)}
                   </td>
                   <td data-label="Status">
                     <select
@@ -491,6 +521,16 @@ const MilkSales = () => {
                       <option value="received">✅</option>
                       <option value="returned">↩️</option>
                     </select>
+                  </td>
+                  <td>
+                    <button 
+                      className="btn-icon-only" 
+                      onClick={() => handleEdit(sale)}
+                      title="Edit sale"
+                      style={{ color: '#3b82f6' }}
+                    >
+                      <FaEdit size={14} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -506,11 +546,14 @@ const MilkSales = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); resetForm(); }}>
           <div className="modal-content modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Record Milk Sale</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>&times;</button>
+              <h2>{editingId ? 'Edit Milk Sale' : 'Record Milk Sale'}</h2>
+              <button className="modal-close" onClick={() => {
+                setShowModal(false);
+                resetForm();
+              }}>&times;</button>
             </div>
             <form onSubmit={handleSubmit}>
               {/* Sale Type Selection */}
@@ -719,30 +762,22 @@ const MilkSales = () => {
                 </div>
               )}
 
-              {/* Additional Details */}
-              <div className="form-section">
-                <div className="form-section-title">
-                  <span>📋</span>
-                  <span>Additional Details</span>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">📦 Quantity</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="form-input"
-                    value={formData.quantity}
-                    onChange={e => setFormData({ ...formData, quantity: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                {formData.saleType !== 'bandhi' && formData.saleType !== 'door_to_door' && (
+
+
+              {/* Customer Name for Bandhi when editing */}
+              {editingId && formData.saleType === 'mandi' && (
+                <div className="form-section">
+                  <div className="form-section-title">
+                    <span>👤</span>
+                    <span>Customer Information</span>
+                  </div>
                   <div className="form-group" ref={dropdownRef}>
                     <label className="form-label">👤 Customer Name</label>
                     <div className="autocomplete-wrapper">
                       <input
                         type="text"
                         className="form-input"
+                        ref={customerInputRef}
                         value={customerSearch}
                         onChange={e => handleCustomerInputChange(e.target.value)}
                         onFocus={() => setShowCustomerDropdown(true)}
@@ -769,7 +804,52 @@ const MilkSales = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+              {/* Additional Details */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <span>📋</span>
+                  <span>Additional Details</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">📅 Date *</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={formData.date}
+                    onChange={e => setFormData({ ...formData, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">📦 Quantity *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-input"
+                    value={formData.quantity}
+                    onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                {/* Rate field for editing Bandhi sales (normally comes from contract) */}
+                {editingId && formData.saleType === 'bandhi' && (
+                  <div className="form-group">
+                    <label className="form-label">💰 Rate per Liter *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="form-input"
+                      value={formData.ratePerLiter}
+                      onChange={e => setFormData({ ...formData, ratePerLiter: e.target.value })}
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
                 )}
+
 
                 <div className="form-group">
                   <label className="form-label">💳 Payment Status</label>
@@ -779,6 +859,7 @@ const MilkSales = () => {
                     onChange={e => setFormData({ ...formData, paymentStatus: e.target.value })}
                   >
                     <option value="pending">⏳ Pending</option>
+                    <option value="partial">◐ Partially Paid</option>
                     <option value="received">✅ Received</option>
                     <option value="returned">↩️ Returned</option>
                   </select>
@@ -803,7 +884,7 @@ const MilkSales = () => {
                 }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">Record Sale</button>
+                <button type="submit" className="btn btn-primary">{editingId ? 'Update Sale' : 'Record Sale'}</button>
               </div>
             </form>
           </div>
